@@ -201,7 +201,13 @@ PyPDF2>=3.0.0          # PDF reading (fallback)
 
 ## Version History / 版本历史
 
-### v2.1 (Current) — Interaction & Depth Optimizations
+### v2.1.1 (Current) — Architecture Cleanup
+- Removed `sys.argv` hacks — all scripts use direct function imports
+- New `engine.py`: pipeline orchestrator (`run_full_pipeline()`)
+- `main.py` is now a pure argparse layer (no business logic)
+- Removed stale nested `resume-tailor/` subdirectory
+
+### v2.1 — Interaction & Depth Optimizations
 - **Fast-Track mode**: skip all checkpoints when match ≥92% + no hard gaps
 - **Memory pre-fill**: recall past CP2/CP3 responses for similar JDs (user_profile_cache.json)
 - **STAR prep sheet**: structured S/T/A/R interview guide for 🔴 Major changes
