@@ -15,7 +15,7 @@ A collection of AI assistant Skills designed to enhance personal workflow effici
 #### Features / 核心功能
 
 - **JD Keyword Extraction / JD 关键词提取**: Automatically parses JD text to extract hard skills, soft skills, domain keywords, and experience requirements / 自动解析 JD 文本，分类提取硬技能、软技能、行业背景、经验要求
-- **Resume Matching / 简历匹配分析**: Analyzes how well your master resume matches the target JD / 对比 master 简历与 JD 关键词，输出直接匹配 / 可关联 / 缺口三类报告
+- **Resume Matching / 简历匹配分析**: Analyzes how well your source resume matches the target JD / 对比源简历与 JD 关键词，输出直接匹配 / 可关联 / 缺口三类报告
 - **Interactive Adjustment / 交互式调整**: 6 decision points where you can guide the tailoring process / 6 个决策介入点，你可以全程引导调整方向：
   1. Experience selection — keep, demote, or remove / 经历取舍
   2. Wording upgrades — fact-check before escalating / 措辞升级（确认后再优化）
