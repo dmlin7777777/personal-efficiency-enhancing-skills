@@ -31,6 +31,8 @@ import argparse
 import json
 from datetime import datetime
 
+from utils import detect_language
+
 
 # ---------------------------------------------------------------------------
 # File reading utilities
@@ -213,17 +215,6 @@ def _assess_upgrade_risk(removed: str, added: str) -> tuple:
 
     # LOW risk: minor expansion (1.2x-1.5x)
     return "low", "Minor wording improvement"
-
-
-# ---------------------------------------------------------------------------
-# Language detection
-# ---------------------------------------------------------------------------
-
-def detect_language(text: str) -> str:
-    """Auto-detect if text is primarily Chinese or English."""
-    chinese_chars = len(re.findall(r"[\u4e00-\u9fff]", text))
-    english_words = len(re.findall(r"[a-zA-Z]+", text))
-    return "zh" if chinese_chars > english_words else "en"
 
 
 # ---------------------------------------------------------------------------

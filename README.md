@@ -95,7 +95,8 @@ resume-tailor/
 ├── SKILL.md                          # Skill definition & workflow
 ├── requirements.txt                  # Python dependencies
 ├── scripts/
-│   ├── main.py                       # Unified CLI entry point (parse/read-structured/diff/ats/full)
+│   ├── main.py                       # Pure argparse CLI layer (no business logic)
+│   ├── engine.py                     # Pipeline orchestrator (run_full_pipeline)
 │   ├── utils.py                      # Shared utilities (language, PII, date, link detection)
 │   ├── jd_parser.py                  # Hard requirement extraction + role detection + portfolio scan
 │   ├── diff_audit.py                 # Source vs tailored diff + structure-aware reading

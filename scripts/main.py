@@ -1,7 +1,8 @@
 """
-Resume Tailor — Unified CLI Entry Point (v2)
+Resume Tailor — Unified CLI Entry Point (v2.1)
 
-Dispatches to jd_parser.py, diff_audit.py, or ats_checker.py.
+Pure argparse layer. All business logic lives in engine.py,
+jd_parser.py, diff_audit.py, and ats_checker.py.
 
 Usage:
     python main.py parse --file jd.txt --resume resume.docx --json
@@ -12,123 +13,145 @@ Usage:
 """
 
 import argparse
-import sys
+import json
 import os
+import sys
 
 # Ensure scripts/ directory is in path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
+# ─── Subcommand handlers (thin wrappers, no sys.argv manipulation) ───
+
+
 def cmd_parse(args):
     """JD feature extraction."""
-    from jd_parser import main as parse_main
-    # Reconstruct sys.argv for jd_parser
-    argv = ["jd_parser.py"]
+    from jd_parser import parse_jd, read_resume_text, print_report, validate_output
+
     if args.file:
-        argv.extend(["--file"])
-    argv.append(args.input)
+        with open(args.input, "r", encoding="utf-8") as f:
+            text = f.read()
+    else:
+        text = args.input
+
+    resume_text = read_resume_text(args.resume) if args.resume else None
+    analysis = parse_jd(text, resume_text)
+
+    if not validate_output(analysis):
+        print(json.dumps({"error": "Output validation failed", "raw_output": str(analysis)}, ensure_ascii=False, indent=2))
+        sys.exit(1)
+
     if args.json:
-        argv.append("--json")
-    if args.resume:
-        argv.extend(["--resume", args.resume])
-    sys.argv = argv
-    parse_main()
+        print(json.dumps(analysis, ensure_ascii=False, indent=2))
+    else:
+        print_report(analysis)
 
 
 def cmd_read_structured(args):
     """Structure-aware resume reading."""
-    from diff_audit import main as diff_main
-    sys.argv = ["diff_audit.py", "--read-structured", args.resume]
+    from diff_audit import read_docx_structured, get_structure_summary
+
+    structured = read_docx_structured(args.resume)
+    summary = get_structure_summary(structured)
+
     if args.json:
-        sys.argv.append("--json")
-    diff_main()
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+    else:
+        for item in structured:
+            print(f"[{item['style']}] {item['text']}")
 
 
 def cmd_diff(args):
     """Diff source vs tailored resume."""
-    from diff_audit import main as diff_main
-    sys.argv = ["diff_audit.py"]
-    if args.source_docx:
-        sys.argv.extend(["--source-docx", args.source_docx])
-    if args.tailored_docx:
-        sys.argv.extend(["--tailored-docx", args.tailored_docx])
-    if args.json:
-        sys.argv.append("--json")
-    diff_main()
+    from diff_audit import generate_audit
+
+    report = generate_audit(
+        source_path=args.source,
+        tailored_path=args.tailored,
+        source_docx=args.source_docx,
+        tailored_docx=args.tailored_docx,
+        company=args.company,
+        role=args.role,
+        jd_source=args.jd_source,
+        source_name=args.source_name,
+        output_lang=args.lang,
+        json_output=args.json,
+    )
+
+    if args.output:
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(report)
+        print(f"Diff audit saved to {args.output}")
+    else:
+        print(report)
 
 
 def cmd_ats(args):
     """ATS compatibility check."""
-    from ats_checker import main as ats_main
-    sys.argv = ["ats_checker.py", "--resume", args.resume]
+    from ats_checker import run_checks, format_markdown
+
+    try:
+        with open(args.resume, "r", encoding="utf-8") as f:
+            text = f.read()
+    except FileNotFoundError:
+        print(f"Error: Resume file not found: {args.resume}", file=sys.stderr)
+        sys.exit(1)
+
+    # Parse keywords
+    keywords = []
     if args.keywords:
-        sys.argv.extend(["--keywords", args.keywords])
-    if args.keywords_file:
-        sys.argv.extend(["--keywords-file", args.keywords_file])
-    if args.region:
-        sys.argv.extend(["--region", args.region])
-    if args.lang:
-        sys.argv.extend(["--lang", args.lang])
+        keywords = [k.strip() for k in args.keywords.split(",") if k.strip()]
+    elif args.keywords_file:
+        try:
+            with open(args.keywords_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    keywords = data
+                elif isinstance(data, dict) and "keywords" in data:
+                    keywords = data["keywords"]
+        except Exception as e:
+            print(f"Warning: Could not read keywords file: {e}", file=sys.stderr)
+
+    result = run_checks(text=text, keywords=keywords, region=args.region)
+
     if args.json:
-        sys.argv.append("--json")
+        output = json.dumps(result, ensure_ascii=False, indent=2)
+    else:
+        output = format_markdown(result, lang=args.lang)
+
     if args.output:
-        sys.argv.extend(["--output", args.output])
-    ats_main()
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(output)
+        print(f"ATS report saved to {args.output}")
+    else:
+        print(output)
 
 
 def cmd_full(args):
     """Full pipeline: parse JD → read resume structure → ATS check."""
-    import json
-    from jd_parser import parse_jd, read_resume_text
-    from diff_audit import read_docx_structured
-    from ats_checker import run_checks
+    from engine import run_full_pipeline
 
-    # Step 1: Parse JD
-    with open(args.jd, "r", encoding="utf-8") as f:
-        jd_text = f.read()
-
-    resume_text = read_resume_text(args.resume) if args.resume else None
-    jd_result = parse_jd(jd_text, resume_text)
-
-    # Step 2: Read resume structure (if .docx)
-    structure = None
-    if args.resume and args.resume.endswith(".docx"):
-        try:
-            structure = read_docx_structured(args.resume)
-        except Exception:
-            pass
-
-    # Step 3: ATS check (keywords from JD)
-    keywords = []
-    if args.keywords:
-        keywords = [k.strip() for k in args.keywords.split(",")]
-    region = args.region or "global"
-
-    if resume_text:
-        ats_result = run_checks(resume_text, keywords=keywords, region=region)
-    else:
-        ats_result = None
-
-    # Compile
-    output = {
-        "jd_analysis": jd_result,
-        "resume_structure": structure,
-        "ats_check": ats_result,
-    }
+    keywords = [k.strip() for k in args.keywords.split(",") if k.strip()] if args.keywords else []
+    result = run_full_pipeline(
+        jd_path=args.jd,
+        resume_path=args.resume,
+        keywords=keywords,
+        region=args.region,
+        json_output=args.json,
+    )
 
     if args.json:
-        print(json.dumps(output, ensure_ascii=False, indent=2))
+        print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
-        from jd_parser import print_report
-        print_report(jd_result)
-        if ats_result:
-            from ats_checker import format_markdown
-            print("\n" + format_markdown(ats_result))
+        print(result)
+
+
+# ─── Argparse setup ───
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Resume Tailor v2 — Unified CLI",
+        description="Resume Tailor v2.1 — Unified CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -149,9 +172,17 @@ def main():
 
     # ─── diff ───
     p_diff = subparsers.add_parser("diff", help="Diff source vs tailored")
+    p_diff.add_argument("--source", type=str, default=None)
+    p_diff.add_argument("--tailored", type=str, default=None)
     p_diff.add_argument("--source-docx", type=str, default=None)
     p_diff.add_argument("--tailored-docx", type=str, default=None)
+    p_diff.add_argument("--company", default="")
+    p_diff.add_argument("--role", default="")
+    p_diff.add_argument("--jd-source", default="")
+    p_diff.add_argument("--source-name", default="source resume")
+    p_diff.add_argument("--lang", default="auto", choices=["auto", "zh", "en"])
     p_diff.add_argument("--json", action="store_true")
+    p_diff.add_argument("--output", default="")
     p_diff.set_defaults(func=cmd_diff)
 
     # ─── ats ───
