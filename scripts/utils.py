@@ -205,6 +205,134 @@ def scan_resume_links(resume_text: str) -> list:
     return found
 
 
+# ─── Resume Timeline Parsing / 简历时间轴解析 ─────────────
+# Used by ats_checker.py for gap detection (especially DACH region)
+
+_MONTH_MAP = {
+    "jan": 1, "january": 1, "feb": 2, "february": 2,
+    "mar": 3, "march": 3, "apr": 4, "april": 4,
+    "may": 5, "jun": 6, "june": 6, "jul": 7, "july": 7,
+    "aug": 8, "august": 8, "sep": 9, "sept": 9, "september": 9,
+    "oct": 10, "october": 10, "nov": 11, "november": 11,
+    "dec": 12, "december": 12,
+}
+
+def _parse_date_part(s: str):
+    """Parse a date string into (YYYY, MM) tuple or None."""
+    s = s.strip().strip(".")
+    # YYYY.MM / YYYY/MM / YYYY-MM
+    m = re.match(r"(\d{4})[.\-/](\d{1,2})", s)
+    if m:
+        return (int(m.group(1)), int(m.group(2)))
+    # YYYY年M月
+    m = re.match(r"(\d{4})\s*年\s*(\d{1,2})\s*月?", s)
+    if m:
+        return (int(m.group(1)), int(m.group(2)))
+    # Month YYYY (e.g., "Jan 2024")
+    m = re.match(r"([A-Za-z]+)\s+(\d{4})", s)
+    if m:
+        month_num = _MONTH_MAP.get(m.group(1).lower())
+        if month_num:
+            return (int(m.group(2)), month_num)
+    # YYYY only
+    m = re.match(r"(\d{4})$", s.strip())
+    if m:
+        return (int(m.group(1)), 1)
+    return None
+
+
+def parse_resume_timeline(text: str) -> dict:
+    """
+    Parse all date ranges from resume text and detect timeline gaps.
+    Returns {"entries": [...], "gaps": [...]}.
+
+    Entries: list of {"start": (YYYY,MM), "end": (YYYY,MM)|None, "raw": str, "is_ongoing": bool}
+    Gaps: list of {"start": (YYYY,MM), "end": (YYYY,MM), "months": int, "detail": str}
+    """
+    from datetime import datetime
+    now = datetime.now()
+    now_ym = (now.year, now.month)
+
+    entries = []
+
+    # Numeric ranges: 2021.01 - 2024.03, 2021/01 - 2024/03, 2021年1月 - 2024年3月
+    for m in re.finditer(
+        r"(\d{4}[.\-/年]\d{1,2}[月]?)\s*[-–—~至到]\s*(\d{4}[.\-/年]\d{1,2}[月]?)",
+        text
+    ):
+        start = _parse_date_part(m.group(1))
+        end = _parse_date_part(m.group(2))
+        if start and end:
+            entries.append({"start": start, "end": end, "raw": m.group(0).strip(), "is_ongoing": False})
+
+    # Ongoing: 2021.01 - present / 至今 / 现在
+    for m in re.finditer(
+        r"(\d{4}[.\-/年]\d{1,2}[月]?)\s*[-–—~至到]\s*(?:present|till\s+now|current|至今|现在)",
+        text, re.IGNORECASE
+    ):
+        start = _parse_date_part(m.group(1))
+        if start:
+            entries.append({"start": start, "end": now_ym, "raw": m.group(0).strip(), "is_ongoing": True})
+
+    # Month name ranges: Jan 2020 - Dec 2024
+    for m in re.finditer(
+        r"([A-Za-z]{3,9})\s+(\d{4})\s*[-–—~至到]\s*([A-Za-z]{3,9})\s+(\d{4})",
+        text, re.IGNORECASE
+    ):
+        start = _parse_date_part(f"{m.group(1)} {m.group(2)}")
+        end = _parse_date_part(f"{m.group(3)} {m.group(4)}")
+        if start and end:
+            entries.append({"start": start, "end": end, "raw": m.group(0).strip(), "is_ongoing": False})
+
+    # Month name ongoing: Jan 2020 - present
+    for m in re.finditer(
+        r"([A-Za-z]{3,9})\s+(\d{4})\s*[-–—~至到]\s*(?:present|till\s+now|current|至今|现在)",
+        text, re.IGNORECASE
+    ):
+        start = _parse_date_part(f"{m.group(1)} {m.group(2)}")
+        if start:
+            entries.append({"start": start, "end": now_ym, "raw": m.group(0).strip(), "is_ongoing": True})
+
+    # Sort by start date
+    entries.sort(key=lambda e: e["start"])
+
+    # Calculate gaps between entries
+    gaps = []
+    for i in range(1, len(entries)):
+        prev_end = entries[i - 1]["end"]
+        curr_start = entries[i]["start"]
+        if prev_end and curr_start:
+            gap_months = (curr_start[0] - prev_end[0]) * 12 + (curr_start[1] - prev_end[1])
+            if gap_months >= 2:  # only flag gaps >= 2 months
+                gap_detail = f"{prev_end[0]}.{prev_end[1]:02d} → {curr_start[0]}.{curr_start[1]:02d} ({gap_months} months)"
+                gaps.append({
+                    "start": prev_end,
+                    "end": curr_start,
+                    "months": gap_months,
+                    "detail": gap_detail,
+                    "after": entries[i - 1]["raw"],
+                    "before": entries[i]["raw"],
+                })
+
+    # Also check gap from last entry to now (if not ongoing)
+    if entries and not entries[-1]["is_ongoing"]:
+        last_end = entries[-1]["end"]
+        if last_end:
+            gap_months = (now_ym[0] - last_end[0]) * 12 + (now_ym[1] - last_end[1])
+            if gap_months >= 2:
+                gap_detail = f"{last_end[0]}.{last_end[1]:02d} → {now_ym[0]}.{now_ym[1]:02d} ({gap_months} months)"
+                gaps.append({
+                    "start": last_end,
+                    "end": now_ym,
+                    "months": gap_months,
+                    "detail": gap_detail,
+                    "after": entries[-1]["raw"],
+                    "before": "(current date)",
+                })
+
+    return {"entries": entries, "gaps": gaps}
+
+
 def check_portfolio_links(jd_text: str, resume_text: str) -> dict:
     """Check if resume has portfolio links appropriate for the detected role type."""
     roles = detect_role_type(jd_text)

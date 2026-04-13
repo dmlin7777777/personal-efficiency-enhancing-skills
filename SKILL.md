@@ -254,6 +254,38 @@ Rules:
 - If `confidence` is `"low"`, log in audit: `"⚠️ Structure recovery confidence: low — manual section review recommended"`
 - If `Normal` ≤ 80%: skip recovery, use the original structure data directly
 
+**Human Verification for Structure Recovery / 结构恢复人工校验**:
+
+When LLM structure recovery is triggered (Normal > 80%), the recovered section boundaries are critical — incorrect segmentation will cascade errors into ALL downstream phases.
+
+```
+After generating the recovered structure:
+1. Present the section breakdown to the user for confirmation:
+
+   "⚠️ Your resume lacks reliable formatting (style markers missing).
+   I attempted to reconstruct the structure automatically:
+
+   Recovered sections / 恢复的章节:
+   1. Education / 教育背景 (3 entries)
+   2. Work Experience / 工作经历 (2 entries)
+   3. Skills / 技能 (1 block)
+   4. [content below this line could not be clearly categorized]
+
+   Please confirm: Are these boundaries correct?
+   请确认：这些章节划分是否正确？
+   - If the user spots an error → adjust the section and re-confirm
+   - If the user says it looks right → proceed with recovered structure
+   - If the user is unsure → log '⚠️ Structure recovery unverified — use with caution'
+
+2. This is especially important for scanned PDFs where content order may be scrambled.
+   扫描版 PDF 尤其需要注意——内容顺序可能被打乱。
+
+3. Do NOT skip this step even in Fast-Track mode (≥ 92% match).
+   结构错误的影响比匹配分数更重要——即使高匹配度，错误的章节划分
+   也会导致关键词被归入错误的上下文。
+"
+```
+
 **Inject structure context into matching / 注入结构上下文**:
 - Skills listed in `ListBullet` or `TableCell` style → higher match weight
 - Content in `Header`/`Footer` style → likely metadata (name, contact) → exclude from keyword matching
@@ -283,7 +315,32 @@ If High ATS risk detected (especially for North America or UK targets):
    - Avoid images, icons, and multi-column layouts / 避免图片、图标和多栏布局
    - If the source is a Canva/graphic PDF, consider recreating it as a plain .docx / 如果源文件是 Canva/图形化 PDF，建议重建为纯 .docx"
 
-**Portfolio & External Links Check / 作品集与外部链接检查**:
+**Timeline Gap Detection / 时间轴空隙检测**:
+
+The `ats_checker.py` script detects timeline gaps (date ranges between entries ≥ 3 months). This is especially important for DACH region applications where employers scrutinize gaps closely.
+
+When the script reports `timeline_gaps` issues:
+- 🟡 Gap of 3-5 months: Low concern. Brief explanation optional.
+- 🔴 Gap of 6+ months: Medium concern. Recommend adding a brief note.
+
+```
+LLM suggestion template:
+"Resume shows a [X]-month gap between [previous role] and [next role].
+简历在 [前一个角色] 和 [下一个角色] 之间有 [X] 个月的空窗期。
+
+Common explanations that strengthen (not weaken) a resume:
+常见增强简历的说明方式：
+- Self-study / certification preparation / 自学或考证准备
+- Personal project / open-source contribution / 个人项目或开源贡献
+- Travel / language study / 旅行或语言学习
+- Family care / health recovery (brief mention only) / 家庭照顾或健康恢复（简短提及）
+
+⚠️ DACH-specific: German employers expect a complete and continuous timeline.
+For DACH applications, consider adding a one-line explanation in the Experience section.
+⚠️ 德语区特别注意：德国雇主期望简历时间线连续完整。
+投递德语区岗位时，建议在经历部分加一行简短说明。"
+```
+```
 
 For certain role types, external portfolios or profiles are strong signals. The script layer (`jd_parser.py`) automatically scans the resume for URLs and detects role type from the JD. Check the `portfolio` field in the script's JSON output:
 
@@ -325,6 +382,37 @@ summary.portfolio = {
 - Only flag if the role type clearly maps to the link category. / 仅在岗位类型明确对应时提示。
 - This is a 🟡 Caution (not 🔴 Critical) — the absence of a link doesn't block tailoring. / 这是建议项，不阻断流程。
 - If the user confirms they don't have a portfolio, suggest creating one before applying. / 用户确认没有作品集时，建议申请前准备。
+
+**Portfolio Deep Advice by Role / 行业专属作品集深度建议**:
+
+The script detects role type and missing links. For each role, the LLM should provide deeper, actionable advice beyond just "add a link":
+
+```
+For Software Engineering roles / 软件工程岗位:
+- If GitHub found: "Consider highlighting 1-2 repos directly in resume bullets.
+  Example: 'Built a real-time analytics dashboard (github.com/user/repo) serving 10K+ daily users.'
+  在简历 bullet 中直接引用 1-2 个代表性仓库，比只放链接更有说服力。"
+- If no GitHub: "A GitHub profile is strongly recommended for engineering roles.
+  Consider creating a profile with at least 2-3 quality repos before applying."
+
+For Data Science / Analytics roles / 数据科学岗位:
+- If GitHub found: "Consider linking specific Jupyter notebooks or data projects.
+  Example: 'End-to-end churn prediction pipeline (Kaggle notebook link) achieving 92% AUC.'"
+- If Kaggle found: "Mention your best competition ranking or kernel performance.
+  Example: 'Kaggle Expert ranked in top 5%' or 'Gold medal in XYZ competition.'"
+
+For Design roles / 设计岗位:
+- If Behance/Dribbble found: "Ensure the portfolio showcases relevant project types
+  (not just visual art — include UX case studies if applying for UX roles)."
+
+For Academic / Research roles / 学术研究岗位:
+- If Scholar found: "Consider adding citation count and h-index if notable.
+  Example: 'Google Scholar profile — h-index: 8, 200+ citations.'"
+
+For Product Management roles / 产品管理岗位:
+- If no portfolio: "Consider writing 2-3 product case studies (problem → analysis → solution → metrics)
+  and hosting them on a personal blog or Medium."
+```
 ```
 
 #### Step 2b: Semantic Matching / 语义匹配
@@ -439,6 +527,37 @@ Match Score: XX%  (Direct: X | Implicit High: X | Implicit Med: X | Implicit Low
   - Translate company names, role titles, and institutional names accurately. Keep well-known brand names in their original form (e.g., "PwC" not "普华永道" in an English resume, unless the user prefers otherwise).
   - If the user is unsure about translation quality, flag the specific sections for user review.
 
+### ⚡ Cross-cutting: Tech Stack Freshness Check / 技术栈时效性检查
+
+**When to run**: After Phase 2 matching, if the JD is for a technical role (Software Engineering, Data Science, DevOps, Front-end, etc.)
+
+```
+Tech Freshness Analysis:
+For each technology/skill in the resume, the LLM assesses freshness:
+
+1. "Current" — widely adopted, industry standard (React, Python, Kubernetes, etc.)
+   → No action needed
+
+2. "Aging" — still in use but newer alternatives dominate
+   → ⚠️ Low risk. Suggest: "If the resume only lists aging tech without any
+     modern equivalents, consider adding current tools or explaining why
+     the aging tech is relevant to the specific domain."
+   → Examples: jQuery → React/Vue, Hadoop → Spark/Databricks, TensorFlow → PyTorch
+
+3. "Legacy" — significantly outdated, may signal skill stagnation
+   → 🟡 Medium risk. Suggest: "Consider removing legacy-only entries or pairing
+     them with modern equivalents. If listing legacy tech for a specific reason
+     (e.g., maintaining legacy systems), explain the context briefly."
+   → Examples: AngularJS, Backbone.js, Grunt, Gulp, Internet Explorer, Perl
+
+Rules:
+- The LLM uses its training knowledge to assess freshness — no hardcoded lists
+- Only flag if the resume lists ONLY aging/legacy tech in a category without any current ones
+- For senior roles: legacy tech knowledge can be a positive (system migration experience)
+- For junior/mid roles: legacy-only tech may signal skill stagnation
+- Output as a one-line note in Phase 2 match analysis, not as a separate report
+```
+
 ### Phase 3: Interactive Adjustment (Dynamic Routing)
 
 **Philosophy / 理念**: Not all resumes need the same level of adjustment. High-match resumes skip unnecessary questions. Low-match resumes get an alignment check first.
@@ -543,10 +662,70 @@ Based on your response, I will adjust the tailoring strategy accordingly."
 1. **Experience Selection / 经历取舍** — Always execute. Present prioritized list based on match relevance.
 2. **Content Gaps / 内容缺口** — Execute unless skipped by routing. For each gap, use scenario-based prompts (see interaction_checkpoints.md Checkpoint 2).
 3. **Quantification / 量化补充** — Always execute. LLM identifies role-specific quantification opportunities (see interaction_checkpoints.md Checkpoint 3 — industry-aware).
+
+   **Campus Scenario Library / 应届生场景库**:
+   When the detected Role Level is "Campus" (or the resume has < 2 years of work experience), the LLM should proactively offer scenario prompts to help candidates recall relevant experiences:
+
+   ```
+   For each gap or quantification opportunity, if the candidate is a campus/new grad:
+   对每个量化缺口，如果候选人是应届生/职场新人：
+
+   Instead of generic "please add metrics", offer specific scenario categories:
+   不要泛泛地说"请补充数据"，而是提供具体的场景类别：
+
+   | JD Keyword / JD 关键词 | Scenario Prompts / 场景引导 |
+   |---|---|
+   | "Communication" / 沟通能力 | "你在社团/学生会中有没有协调过跨部门活动？比如组织过多少人参加的活动？" |
+   | "Leadership" / 领导力 | "有没有担任过项目负责人、小组组长、社团负责人？带领了几个人？完成了什么？" |
+   | "Data analysis" / 数据分析 | "课程作业或毕业论文中有没有用 Python/Excel/R 做过数据分析？处理了多少数据？" |
+   | "Teamwork" / 团队协作 | "有没有参加过小组项目（课程设计、比赛、社团）？你在团队中承担什么角色？" |
+   | "Problem solving" / 解决问题 | "有没有遇到过技术难题/项目困难并解决的例子？具体怎么解决的？" |
+   | "Project management" / 项目管理 | "有没有用 Notion/Excel/Git 等工具管理过项目进度或任务分配？" |
+
+   Rules:
+   - Offer 3-5 scenario prompts per gap, tailored to the specific JD keyword
+   - Use the candidate's known context (university, major, clubs from resume) to personalize
+   - If the candidate responds with a scenario, help them convert it into a professional bullet point
+   ```
 4. **Wording Upgrade / 措辞升级** — Always execute. Includes **Low-confidence implicit matches** from Phase 2 that need user verification. Risk classification applies (see interaction_checkpoints.md Checkpoint 4).
 5. **Experience Merge/Split / 经历合并拆分** — Execute unless skipped by routing. Only when merging genuinely strengthens the narrative.
 
 **For each checkpoint**: present the question clearly, wait for user response, then proceed.
+
+**Multi-Currency Value Alignment / 多币种价值对齐**:
+
+When the candidate provides quantified achievements in one currency but the JD targets a different region:
+
+```
+Currency adaptation rules / 币种适配规则:
+
+1. Detect currency mismatch:
+   - Resume uses CNY (¥) → JD targets US/EU/SG company
+   - Resume uses USD ($) → JD targets EU/JP company
+   etc.
+
+2. If mismatch detected, suggest conversion with context:
+   "Your resume mentions '处理了 ¥500 万预算' but the JD is for a Singapore-based company.
+   Consider adapting: 'Managed a budget of ~S$950K (¥500万)' —
+   this makes the business impact immediately relatable to the hiring manager.
+   注意：转换仅供参考，不要精确到小数点——用近似整数即可。"
+
+3. Use approximate conversions (the LLM knows rough exchange rates):
+   - CNY → USD: ×0.14, CNY → EUR: ×0.13, CNY → SGD: ×0.19
+   - USD → EUR: ×0.92, USD → GBP: ×0.79
+   - Always round to clean numbers: ¥500万 → ~$700K, not $697,432
+
+4. What to convert / 转换什么:
+   ✅ Budget figures, revenue, cost savings — directly convert
+   ✅ User counts, transaction volumes — keep as-is (universal)
+   ❌ Percentages, ratios — do NOT convert (already unitless)
+   ❌ Local-specific metrics (e.g., "GMV in CNY") — keep original, add parenthetical conversion
+
+5. Resume formatting:
+   - Use the target region's currency symbol as primary, original as parenthetical
+   - Example: "Managed budget of S$950K (≈¥500万)"
+   - Never fabricate numbers — only convert what the candidate actually stated
+```
 
 ### Phase 4: Generate Tailored Resume (Auto + Final Confirmation)
 

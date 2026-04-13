@@ -201,7 +201,16 @@ PyPDF2>=3.0.0          # PDF reading (fallback)
 
 ## Version History / 版本历史
 
-### v2.1.1 (Current) — Architecture Cleanup
+### v2.2 (Current) — Global Perspective Enhancements
+- **Tech stack freshness**: LLM identifies aging/legacy technologies and suggests modern equivalents
+- **Timeline gap detection**: Script parses date ranges, flags gaps ≥ 3 months (critical for DACH region)
+- **ATS modernity scaling**: Table/format severity adjusts by region (modern ATS like Greenhouse/Lever → low risk)
+- **Campus scenario library**: Auto-generates recall prompts for fresh grads during quantification checkpoint
+- **Multi-currency alignment**: LLM suggests converting currencies when resume and JD regions differ
+- **Structure recovery verification**: Human checkpoint added when LLM recovers resume structure
+- **Portfolio deep advice**: Role-specific guidance beyond link detection (repo citations, notebook links, citation counts)
+
+### v2.1.1 — Architecture Cleanup
 - Removed `sys.argv` hacks — all scripts use direct function imports
 - New `engine.py`: pipeline orchestrator (`run_full_pipeline()`)
 - `main.py` is now a pure argparse layer (no business logic)

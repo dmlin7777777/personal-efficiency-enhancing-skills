@@ -34,7 +34,7 @@ import argparse
 import json
 from datetime import datetime
 
-from utils import detect_language, PII_PATTERNS, DATE_FORMAT_PATTERNS
+from utils import detect_language, PII_PATTERNS, DATE_FORMAT_PATTERNS, parse_resume_timeline
 
 REGIONAL_PROFILES = {
     "north_america": {
@@ -48,6 +48,7 @@ REGIONAL_PROFILES = {
             "nationality", "salary_history", "full_address",
         ],
         "strict_format": True,
+        "ats_modernity": "modern",
     },
     "uk_ireland": {
         "label": "UK / Ireland",
@@ -60,6 +61,7 @@ REGIONAL_PROFILES = {
             "national_insurance",
         ],
         "strict_format": True,
+        "ats_modernity": "modern",
     },
     "dach": {
         "label": "DACH (Germany/Austria/Switzerland)",
@@ -69,6 +71,7 @@ REGIONAL_PROFILES = {
         "max_pages": 3,
         "forbidden_pii": ["religion", "political_affiliation"],
         "strict_format": False,
+        "ats_modernity": "traditional",
     },
     "east_asia": {
         "label": "East Asia (CN/JP/KR/SG)",
@@ -78,6 +81,7 @@ REGIONAL_PROFILES = {
         "max_pages": 2,
         "forbidden_pii": [],
         "strict_format": False,
+        "ats_modernity": "mixed",
     },
     "global": {
         "label": "Global / Remote",
@@ -90,6 +94,7 @@ REGIONAL_PROFILES = {
             "nationality", "salary_history",
         ],
         "strict_format": True,
+        "ats_modernity": "modern",
     },
 }
 
@@ -98,8 +103,8 @@ REGIONAL_PROFILES = {
 # Check functions
 # ---------------------------------------------------------------------------
 
-def check_tables(text: str) -> list:
-    """Detect markdown/HTML tables in resume."""
+def check_tables(text: str, ats_modernity: str = "modern") -> list:
+    """Detect markdown/HTML tables in resume. Severity depends on ATS modernity."""
     issues = []
     # Markdown tables
     md_tables = re.findall(r"^\|.+\|$", text, re.MULTILINE)
@@ -115,14 +120,29 @@ def check_tables(text: str) -> list:
             else:
                 in_table = False
 
+        # Modern ATS (Greenhouse, Lever, Workday 2024+) handles simple tables well
+        # Traditional ATS may still garble table content
+        if ats_modernity == "modern":
+            severity = "low"
+            note_suffix = " Modern ATS systems (Greenhouse, Lever) generally parse simple tables well."
+            note_suffix_zh = " 现代 ATS 系统（Greenhouse、Lever）通常能正确解析简单表格。"
+        elif ats_modernity == "traditional":
+            severity = "high"
+            note_suffix = ""
+            note_suffix_zh = ""
+        else:  # mixed
+            severity = "medium"
+            note_suffix = " ATS parsing varies — some systems handle tables, others don't."
+            note_suffix_zh = " ATS 解析能力不一——部分系统支持表格，部分不支持。"
+
         issues.append({
             "check": "tables",
-            "severity": "high" if md_tables else "low",
-            "detail_en": f"Found {table_count} markdown table(s). ATS systems may not parse table content correctly.",
-            "detail_zh": f"发现 {table_count} 个 Markdown 表格。ATS 系统可能无法正确解析表格内容。",
-            "suggestion_en": "Convert tables to bullet lists. Example: '- Python, SQL, Power BI' instead of a skills table.",
-            "suggestion_zh": "将表格转换为列表。例如：用 '- Python, SQL, Power BI' 替代技能表格。",
-            "evidence": md_tables[:3],  # cap at 3 examples
+            "severity": severity,
+            "detail_en": f"Found {table_count} markdown table(s).{note_suffix}",
+            "detail_zh": f"发现 {table_count} 个 Markdown 表格。{note_suffix_zh}",
+            "suggestion_en": "For maximum compatibility, convert tables to bullet lists. Example: '- Python, SQL, Power BI' instead of a skills table.",
+            "suggestion_zh": "为最大兼容性，将表格转换为列表。例如：用 '- Python, SQL, Power BI' 替代技能表格。",
+            "evidence": md_tables[:3],
         })
 
     # HTML tables
@@ -507,6 +527,45 @@ def check_page_length(text: str, profile: dict) -> list:
     return issues
 
 
+def check_timeline_gaps(text: str, gap_threshold_months: int = 3) -> list:
+    """Detect timeline gaps in resume (especially relevant for DACH region)."""
+    issues = []
+    timeline = parse_resume_timeline(text)
+    gaps = timeline.get("gaps", [])
+
+    significant_gaps = [g for g in gaps if g["months"] >= gap_threshold_months]
+
+    if significant_gaps:
+        gap_descriptions = [g["detail"] for g in significant_gaps]
+        severity = "medium"
+        if any(g["months"] >= 6 for g in significant_gaps):
+            severity = "high"
+
+        issues.append({
+            "check": "timeline_gaps",
+            "severity": severity,
+            "detail_en": (
+                f"Found {len(significant_gaps)} timeline gap(s) of {gap_threshold_months}+ months."
+                f" Some employers (especially in DACH region) may ask about gaps."
+            ),
+            "detail_zh": (
+                f"发现 {len(significant_gaps)} 个 {gap_threshold_months} 个月以上的时间空隙。"
+                f" 部分雇主（尤其是德语区）可能会询问空窗期。"
+            ),
+            "suggestion_en": (
+                "Consider adding a brief explanation (e.g., self-study, travel, personal project, "
+                "certification preparation). For DACH applications, gaps are scrutinized more closely."
+            ),
+            "suggestion_zh": (
+                "考虑简要说明（如自学、旅行、个人项目、考证准备）。"
+                "投递德语区岗位时空窗期会被更严格审查。"
+            ),
+            "evidence": gap_descriptions[:5],
+        })
+
+    return issues
+
+
 # ---------------------------------------------------------------------------
 # Main check runner
 # ---------------------------------------------------------------------------
@@ -521,11 +580,12 @@ def run_checks(
     Returns structured result dict.
     """
     profile = REGIONAL_PROFILES.get(region, REGIONAL_PROFILES["global"])
+    ats_modernity = profile.get("ats_modernity", "mixed")
 
     all_issues = []
 
     # Run all checks
-    all_issues.extend(check_tables(text))
+    all_issues.extend(check_tables(text, ats_modernity=ats_modernity))
     all_issues.extend(check_images(text))
     all_issues.extend(check_special_chars(text))
     all_issues.extend(check_sections(text, profile))
@@ -535,6 +595,7 @@ def run_checks(
     all_issues.extend(check_keywords(text, keywords or []))
     all_issues.extend(check_pii(text, profile))
     all_issues.extend(check_page_length(text, profile))
+    all_issues.extend(check_timeline_gaps(text))
 
     # Calculate score
     total = len(all_issues)
@@ -555,6 +616,7 @@ def run_checks(
             "ats_systems": profile["ats_systems"],
             "max_pages": profile["max_pages"],
             "strict_format": profile["strict_format"],
+            "ats_modernity": ats_modernity,
         },
         "summary": {
             "total_issues": total,

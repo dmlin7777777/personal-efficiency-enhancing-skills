@@ -232,3 +232,5 @@ Not all sections appear in every audit log. Include only when applicable:
 | Portfolio & Links / 作品集 | When script detected role type + missing links / 脚本检测到角色类型和缺失链接时 |
 | User Acknowledgments / 用户确认 | When user overrode a 🔴 Critical compliance finding / 用户覆盖了 🔴 Critical 合规项时 |
 | Shadow Resume / 影子副本 | When source and target languages differ / 源语言与目标语言不同时 |
+| Timeline Gaps / 时间轴空隙 | When gaps ≥ 3 months detected / 检测到 ≥ 3 个月空窗期时 |
+| Tech Freshness Notes / 技术栈时效 | When aging/legacy-only tech detected in technical roles / 技术岗检测到过时技术时 |
