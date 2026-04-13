@@ -1,0 +1,13 @@
+# Resume Tailor v2 — Python Dependencies
+
+# Core: .docx reading and writing
+python-docx>=0.8.11
+
+# PDF reading (recommended — best quality):
+pdfplumber>=0.10.0
+
+# Optional fallbacks (auto-detected at runtime, no need to install unless pdfplumber fails):
+#   PyPDF2>=3.0.0     — Python native, no system dependency
+#   pdftotext (CLI)   — https://poppler.freedesktop.org/
+
+# Optional: pandoc — for .docx to PDF conversion
