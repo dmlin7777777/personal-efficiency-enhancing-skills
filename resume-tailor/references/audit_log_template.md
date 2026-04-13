@@ -1,64 +1,69 @@
-# Audit Log Template
+# Audit Log Template / 审计日志模板
 
 Template for version-tracked resume changes.
+简历变更版本的追踪模板。
 
-## Generated File
+## Generated File / 生成文件
 
 ```
 resume/history/YYYY-MM-DD_{company}_{role}_audit.md
 ```
 
-## Audit Log Structure
+## Audit Log Structure / 审计日志结构
 
 ```markdown
-# 简历变更审计
+# Resume Change Audit / 简历变更审计
 
-- **日期**: YYYY-MM-DD
-- **目标岗位**: {company} - {role}
-- **JD 来源**: {URL 或 "用户粘贴"}
-- **基于版本**: {source_resume_filename}
+- **Date / 日期**: YYYY-MM-DD
+- **Target / 目标岗位**: {company} - {role}
+- **JD Source / JD 来源**: {URL or "Pasted by user / 用户粘贴"}
+- **Based on / 基于版本**: {source_resume_filename}
 
-## 匹配度摘要
+## Match Summary / 匹配度摘要
 
-| 指标 | 数值 |
+| Metric / 指标 | Value / 数值 |
 |------|------|
-| JD 关键词总数 | X |
-| 直接匹配 | Y (Z%) |
-| 可关联 | A (B%) |
-| 缺口 | C (D%) |
+| JD Keywords / JD 关键词总数 | X |
+| Direct Match / 直接匹配 | Y (Z%) |
+| Related / 可关联 | A (B%) |
+| Gap / 缺口 | C (D%) |
 
-## 变更记录
+## Change Record / 变更记录
 
-### 新增内容
-| 位置 | 原文 | 新增内容 | 来源 |
+### Added Content / 新增内容
+
+| Section / 位置 | Original / 原文 | Added / 新增内容 | Source / 来源 |
 |------|------|---------|------|
-| [经历名称] | — | [新增的 bullet point] | 用户补充 / 优化措辞 |
+| [Experience name] | — | [New bullet point] | User provided / 用户补充 |
 
-### 删除内容
-| 位置 | 原文 | 原因 |
+### Removed Content / 删除内容
+
+| Section / 位置 | Content / 内容 | Reason / 原因 |
 |------|------|------|
-| [经历名称] | [被删除的 bullet point] | 与 JD 关联弱 / 用户确认删除 |
+| [Experience name] | [Deleted bullet point] | Low relevance / 与 JD 关联弱 |
 
-### 修改内容
-| 位置 | 原文 | 修改后 | 类型 |
+### Modified Content / 修改内容
+
+| Section / 位置 | Before / 修改前 | After / 修改后 | Type / 类型 |
 |------|------|--------|------|
-| [经历名称] | [原文] | [修改后] | 措辞升级 / 量化补充 / 排序调整 |
+| [Experience name] | [Before] | [After] | Wording upgrade / Quantification / Reorder |
 
-### 排序变更
-| 经历 | 原排序 | 新排序 | 原因 |
+### Reorder Changes / 排序变更
+
+| Experience / 经历 | Before / 原排序 | After / 新排序 | Reason / 原因 |
 |------|--------|--------|------|
-| [经历A] | #3 | #1 | 直接匹配 JD 核心要求 |
+| [Experience A] | #3 | #1 | Directly matches core JD requirement |
 
-## 未覆盖的 JD 要求
+## Uncovered JD Requirements / 未覆盖的 JD 要求
 
-- [ ] [关键词1] — 无对应内容，用户确认无相关经历
-- [ ] [关键词2] — 用户补充了相关经历（见新增内容）
+- [ ] [Keyword 1] — No matching content, user confirmed no relevant experience / 无对应内容，用户确认无相关经历
+- [ ] [Keyword 2] — User provided relevant experience (see added content) / 用户补充了相关经历（见新增内容）
 
-## 文件清单
+## File Manifest / 文件清单
 
-| 文件 | 路径 |
+| File / 文件 | Path / 路径 |
 |------|------|
-| 调整后简历 (Markdown) | `resume/history/YYYY-MM-DD_{company}_{role}.md` |
-| 变更审计 | `resume/history/YYYY-MM-DD_{company}_{role}_audit.md` |
-| 调整后简历 (PDF) | `resume/history/YYYY-MM-DD_{company}_{role}.pdf` |
+| Tailored resume (Markdown) / 调整后简历 | `resume/history/YYYY-MM-DD_{company}_{role}.md` |
+| Change audit / 变更审计 | `resume/history/YYYY-MM-DD_{company}_{role}_audit.md` |
+| Tailored resume (PDF) / 调整后简历 | `resume/history/YYYY-MM-DD_{company}_{role}.pdf` |
 ```

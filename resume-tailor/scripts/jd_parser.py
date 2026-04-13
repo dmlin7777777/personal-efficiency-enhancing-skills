@@ -1,6 +1,9 @@
 """
 JD Parser - Extract and categorize keywords from a job description.
 
+Uses heuristic rules instead of hardcoded word lists, making it
+language-agnostic and role-agnostic.
+
 Usage:
     python jd_parser.py "<jd_text>"
     python jd_parser.py --file path/to/jd.txt
@@ -16,201 +19,247 @@ import argparse
 from collections import defaultdict
 
 
-# Keyword categories with patterns
-HARD_SKILLS_PATTERNS = {
-    "programming": [
-        "Python", "Java", "SQL",
-        "JavaScript", "TypeScript",
-        "Scala",
-        "Spark", "Hadoop", "HDFS", "Hive",
-        "TensorFlow", "PyTorch", "scikit-learn",
-    ],
-    "tools": [
-        "Excel", "Power BI", "Tableau",
-        "SAS", "SPSS", "Git", "Docker",
-        "Kubernetes", "Jira", "Confluence",
-        "Figma", "Axure", "Copilot Studio",
-        "Power Apps", "Power Automate",
-        "RPA", "Selenium",
-    ],
-    "databases": [
-        "MySQL", "PostgreSQL", "MongoDB", "Redis",
-        "Oracle", "SQL Server", "BigQuery",
-    ],
-    "marketing_ad": [
-        "oCPX", "oCPC", "oCPM", "oCPA", "CTR", "CVR",
-        "ROI", "ROAS", "GMV", "DAU", "MAU", "ARPU",
-        "LTV", "CAC",
-        "A/B测试", "A/B test", "A/B Testing",
-        "DMP", "DSP", "SSP", "ADX",
-        "SEM", "SEO", "ASM",
-        "程序化广告", "信息流", "竞价", "出价", "定向", "人群包", "素材", "创意",
-    ],
-    "data_analysis": [
-        "数据分析", "数据建模", "数据治理",
-        "机器学习", "深度学习", "NLP",
-        "ETL", "数据仓库", "数据湖",
-        "漏斗分析", "归因分析", "用户画像",
-        "埋点", "指标体系",
-        "Prophet", "LightGBM", "XGBoost",
-    ],
-}
+# ─── Universal patterns (language-agnostic) ─────────────────────
 
-SOFT_SKILLS_PATTERNS = {
-    "leadership": [
-        "主导", r"带领?", "管理", "领导",
-        r"(?<!\w)leader(?!\w)", r"(?<!\w)manage(?!\w)", r"(?<!\w)lead(?!\w)",
-        "团队协作", "跨团队", "沟通能力",
-        r"推动?", "协调",
-        "项目管理", r"(?<!\w)PM(?!\w)",
-    ],
-    "problem_solving": [
-        "分析", "优化", "解决问题",
-        "逻辑思维", "批判性思维",
-        r"analytical", r"problem.?solving",
-    ],
-    "communication": [
-        "沟通", "表达", "汇报", "演示",
-        r"presentation", r"communication",
-        "客户沟通", "商务沟通",
-    ],
-    "initiative": [
-        "主动性", "自驱", r"(?<!\w)owner(?!\w)", "主人翁",
-        "主动", r"proactive", r"self.?driven",
-    ],
-}
+# Experience / seniority — works for both Chinese and English
+EXPERIENCE_RULES = [
+    # English: "3+ years", "5 years of experience", "3-5 years"
+    (r"(\d+)\s*[-–~到至]\s*(\d+)\s*\+?\s*(?:years?|yrs?|年)", "years_range"),
+    (r"(\d+)\s*\+?\s*(?:years?\s*(?:of\s+)?experience|年(?:以上)?(?:工作)?(?:经验)?)", "years_min"),
+    (r"(?:fresh\s*grad|entry\s*level|应届|初级|入门)", "entry_level"),
+    (r"(?:senior|staff|principal|高级|资深)", "senior_level"),
+    (r"(?:mid[- ]?level|中级)", "mid_level"),
+]
 
-DOMAIN_PATTERNS = {
-    "advertising": [
-        "广告", "营销", "投放", "品牌", "效果广告",
-        r"advertising", r"marketing", r"campaign", r"brand",
-        "媒体", "流量", "转化",
-    ],
-    "finance": [
-        "金融", "财务", "审计", "会计", "风控", "信贷",
-        r"finance", r"accounting", r"audit", r"risk",
-        "资金", "结算", "合规",
-    ],
-    "tech_platform": [
-        "互联网", "平台", "产品", "运营", "用户增长",
-        r"internet", r"platform", r"product", r"operation",
-        r"SaaS", r"B2B", r"B2C",
-    ],
-    "energy_sustainability": [
-        "新能源", "碳中和", "可持续发展", "绿电",
-        r"energy", r"sustainability", r"carbon",
-    ],
-}
+# Degree / education
+DEGREE_RULES = [
+    (r"(?:Ph\.?D|Doctorate|博士)", "PhD"),
+    (r"(?:Master|M\.?S\.?|MSc|MBA|硕士|研究生)", "Master"),
+    (r"(?:Bachelor|B\.?S\.?|BSc|BA|本科|学士)", "Bachelor"),
+    (r"(?:Associate| diploma|大专|专科|副学士)", "Associate"),
+]
 
-EXPERIENCE_PATTERNS = [
-    (r"(\d+)\s*年\s*以上?", "years"),
-    (r"(\d+)\+?\s*年\s*(?:以上|经验|工作)?", "years"),
-    (r"(?:硕士|博士|本科|学士|研究生|master|phd|bachelor)", "degree"),
-    (r"(?:英语|CET|IELTS|TOEFL|英文)", "language"),
+# Language requirements
+LANGUAGE_RULES = [
+    (r"(?:IELTS|雅思)\s*[:：]?\s*(\d+(?:\.\d+)?)", "IELTS"),
+    (r"(?:TOEFL|托福)\s*[:：]?\s*(\d+)", "TOEFL"),
+    (r"(?:CET[- ]?(4|6)|英语四六级)\s*[:：]?\s*(?::?\s*(\d+)?)?", "CET"),
+    (r"(?:fluent|proficient|native|business)\s+(?:in\s+)?(?:English|Chinese|Japanese|Korean|French|German|Spanish|Mandarin|Cantonese|English|中文|日语|韩语|法语|德语|西班牙语)", "language"),
+    (r"(?:English|英文|英语)\s*(?:as\s+working\s+language|working\s+proficiency|流利|熟练|精通)", "language"),
 ]
 
 
+def extract_experience(text: str) -> list:
+    """Extract experience and education requirements."""
+    results = []
+    seen = set()
+
+    for pattern, label in EXPERIENCE_RULES + DEGREE_RULES + LANGUAGE_RULES:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            value = match.group(0).strip()
+            key = f"{label}:{value}"
+            if key not in seen:
+                seen.add(key)
+                results.append({"type": label, "value": value})
+
+    return results
+
+
+def extract_tech_keywords(text: str) -> list:
+    """
+    Extract technical/skill keywords using heuristic signals.
+
+    Strategy: look for known technical term patterns that are universal
+    across languages and domains, rather than maintaining a hardcoded list.
+    """
+    keywords = []
+    seen = set()
+
+    # Pattern 1: CamelCase or PascalCase terms (e.g., Power BI, Tableau, TensorFlow)
+    camel_matches = re.findall(r"\b(?:[A-Z][a-z0-9]+(?:\s+[A-Z][a-z0-9]+)*)\b", text)
+    for m in camel_matches:
+        m = m.strip()
+        # Filter out common English words that happen to be capitalized
+        common_words = {"The", "This", "That", "With", "From", "Have", "Will",
+                        "Must", "Can", "Our", "You", "Your", "We", "All",
+                        "Not", "But", "For", "Are", "Was", "Were", "Been",
+                        "Being", "Each", "Which", "Their", "There", "These",
+                        "Those", "What", "When", "Where", "Who", "How",
+                        "Work", "Team", "Role", "Job", "Time", "Make",
+                        "Good", "Great", "Best", "Strong", "High", "New"}
+        if m not in common_words and len(m) > 2 and m not in seen:
+            seen.add(m)
+            keywords.append(m)
+
+    # Pattern 2: Terms in parentheses or after colons (often skill lists)
+    paren_matches = re.findall(r"[\(（]([^)）]+)[\)）]", text)
+    for group in paren_matches:
+        # Split by commas, slashes, or Chinese enumeration commas
+        items = re.split(r"[,，、/／;；]", group)
+        for item in items:
+            item = item.strip()
+            if 2 < len(item) < 40 and item not in seen:
+                seen.add(item)
+                keywords.append(item)
+
+    # Pattern 3: Known universal abbreviation patterns (e.g., SQL, API, AI, ML, NLP)
+    abbrev_matches = re.findall(r"\b(?:[A-Z]{2,6}|[A-Z][a-z]\.[A-Z]\.[a-z]?)\b", text)
+    for m in abbrev_matches:
+        m = m.strip()
+        # Filter very common non-skill abbreviations
+        skip = {"JD", "CV", "PM", "HR", "CEO", "CTO", "CFO", "COO", "VP", "FAQ",
+                "DNA", "NOTE", "TBD", "ETA", "ASAP", "N/A", "TBA", "AKA",
+                "VPN", "WiFi", "HTTP", "URL", "PDF", "GUI"}
+        if m not in skip and m not in seen:
+            seen.add(m)
+            keywords.append(m)
+
+    # Pattern 4: Quoted terms (often emphasis on specific skills/tools)
+    quote_matches = re.findall(r'[""「」『』]([^""「」『』]+)[""「」『』]', text)
+    for m in quote_matches:
+        m = m.strip()
+        if 2 < len(m) < 40 and m not in seen:
+            seen.add(m)
+            keywords.append(m)
+
+    # Pattern 5: Programming languages, frameworks, and tools (common suffixes)
+    # These are universal patterns that work across any tech JD
+    tech_suffixes = [
+        r"\b(?:JavaScript|TypeScript|Python|Java|Ruby|Go|Rust|Swift|Kotlin|C\+\+|C#|PHP|Scala|R|MATLAB|Julia)\b",
+        r"\b\w+\.js\b",  # React.js, Vue.js, Node.js, etc.
+        r"\b(?:TensorFlow|PyTorch|scikit-learn|Keras|OpenCV|Pandas|NumPy|Spark|Hadoop|Hive|Kafka|Flink|Airflow|Docker|Kubernetes|Jenkins|Git)\b",
+    ]
+    for pattern in tech_suffixes:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for m in matches:
+            m = m.strip()
+            if m not in seen:
+                seen.add(m)
+                keywords.append(m)
+
+    return keywords
+
+
+def extract_action_verbs(text: str) -> list:
+    """
+    Extract action verbs / responsibility indicators from JD.
+    These signal what the candidate is expected to DO.
+    """
+    # Universal action verb patterns (work for both EN and ZH)
+    action_patterns = [
+        # English action verbs commonly used in JDs
+        r"\b(?:design|develop|build|create|implement|deploy|manage|lead|drive|optimize|analyze|monitor|maintain|support|collaborate|coordinate|deliver|architect|configure|automate|integrate|migrate|troubleshoot|debug|test|review|evaluate|assess|improve|enhance|establish|streamline|scale)\w*\b",
+        # Chinese action verbs
+        r"[\u4e00-\u9fff]*(?:主导|负责|搭建|设计|开发|构建|部署|管理|带领|推动|优化|分析|监控|维护|支持|协作|协调|交付|架构|配置|自动化|集成|迁移|排查|测试|评审|评估|改进|提升|建立|简化|扩展)[\u4e00-\u9fff]*",
+    ]
+
+    verbs = []
+    seen = set()
+    for pattern in action_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for m in matches:
+            m = m.strip()
+            if m and len(m) <= 20 and m not in seen:
+                seen.add(m)
+                verbs.append(m)
+
+    return verbs
+
+
+def extract_metrics_keywords(text: str) -> list:
+    """
+    Extract business metric terms from JD (KPIs the role is measured by).
+    """
+    metrics = []
+    seen = set()
+
+    # Universal metric patterns
+    metric_patterns = [
+        # English metric abbreviations
+        r"\b(?:ROI|ROAS|GMV|DAU|MAU|ARPU|LTV|CAC|CTR|CVR|CPA|CPC|CPM|NPS|CSAT|MRR|ARR|Churn|Retention|Conversion|Engagement)\b",
+        # Chinese metric terms
+        r"(?:转化率|点击率|留存率|复购率|满意度|活跃度|增长率|毛利率|净利率|市场份额|用户增长|收入增长)",
+        # "X% improvement" patterns
+        r"\d+\s*%?\s*(?:increase|decrease|improvement|reduction|growth|提升|降低|增长|减少)",
+        # "by X%" patterns
+        r"(?:by|达到|提升至|降低至)\s*\d+\s*%",
+    ]
+
+    for pattern in metric_patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for m in matches:
+            m = m.strip()
+            if m and m not in seen:
+                seen.add(m)
+                metrics.append(m)
+
+    return metrics
+
+
 def extract_keywords(text: str) -> dict:
-    """Extract and categorize keywords from JD text."""
+    """Extract and categorize keywords from JD text using heuristic rules."""
+
+    tech = extract_tech_keywords(text)
+    actions = extract_action_verbs(text)
+    metrics = extract_metrics_keywords(text)
+    experience = extract_experience(text)
+
+    # Auto-detect language
+    chinese_chars = len(re.findall(r"[\u4e00-\u9fff]", text))
+    english_words = len(re.findall(r"[a-zA-Z]+", text))
+    lang = "zh" if chinese_chars > english_words else "en"
 
     result = {
-        "hard_skills": defaultdict(list),
-        "soft_skills": defaultdict(list),
-        "domain": defaultdict(list),
-        "experience": [],
-        "raw_keywords": [],
+        "language": lang,
+        "tech_keywords": tech,
+        "action_verbs": actions,
+        "business_metrics": metrics,
+        "requirements": experience,
+        "all_keywords": sorted(list(set(tech + actions + metrics + [e["value"] for e in experience]))),
     }
-
-    text_lower = text.lower()
-
-    # Extract hard skills
-    for category, patterns in HARD_SKILLS_PATTERNS.items():
-        for pattern in patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            for m in matches:
-                keyword = m.strip()
-                if keyword and keyword not in result["hard_skills"][category]:
-                    result["hard_skills"][category].append(keyword)
-
-    # Extract soft skills
-    for category, patterns in SOFT_SKILLS_PATTERNS.items():
-        for pattern in patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            for m in matches:
-                keyword = m.strip()
-                if keyword and keyword not in result["soft_skills"][category]:
-                    result["soft_skills"][category].append(keyword)
-
-    # Extract domain keywords
-    for category, patterns in DOMAIN_PATTERNS.items():
-        for pattern in patterns:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            for m in matches:
-                keyword = m.strip()
-                if keyword and keyword not in result["domain"][category]:
-                    result["domain"][category].append(keyword)
-
-    # Extract experience requirements
-    for pattern, exp_type in EXPERIENCE_PATTERNS:
-            matches = re.findall(pattern, text, re.IGNORECASE)
-            for m in matches:
-                value = m if isinstance(m, str) else m[0] if m else ""
-                result["experience"].append({"type": exp_type, "value": value.strip()})
-
-    # Deduplicate experience
-    seen = set()
-    deduped = []
-    for exp in result["experience"]:
-        key = f"{exp['type']}:{exp['value']}"
-        if key not in seen:
-            seen.add(key)
-            deduped.append(exp)
-    result["experience"] = deduped
-
-    # Flatten all keywords for easy reference
-    all_keywords = set()
-    for cat in result["hard_skills"].values():
-        all_keywords.update(cat)
-    for cat in result["soft_skills"].values():
-        all_keywords.update(cat)
-    for cat in result["domain"].values():
-        all_keywords.update(cat)
-    result["raw_keywords"] = sorted(list(all_keywords))
 
     return result
 
 
 def print_report(analysis: dict):
     """Print a human-readable analysis report."""
+    lang = analysis.get("language", "en")
+    is_zh = lang == "zh"
 
-    print("=" * 60)
-    print("JD 关键词分析报告")
-    print("=" * 60)
+    sep = "=" * 60
+    title = "JD 关键词分析报告" if is_zh else "JD Keyword Analysis Report"
+    print(sep)
+    print(title)
+    print(sep)
 
-    print("\n## 硬技能 (Hard Skills)")
-    for category, keywords in analysis["hard_skills"].items():
-        if keywords:
-            print(f"  {category}: {', '.join(keywords)}")
+    # Tech keywords
+    tech_label = "技术关键词" if is_zh else "Tech Keywords"
+    print(f"\n## {tech_label}")
+    print(f"  {', '.join(analysis['tech_keywords']) if analysis['tech_keywords'] else '—'}")
 
-    print("\n## 软技能 (Soft Skills)")
-    for category, keywords in analysis["soft_skills"].items():
-        if keywords:
-            print(f"  {category}: {', '.join(keywords)}")
+    # Action verbs
+    action_label = "行为动词 (Action Verbs)" if is_zh else "Action Verbs"
+    print(f"\n## {action_label}")
+    print(f"  {', '.join(analysis['action_verbs']) if analysis['action_verbs'] else '—'}")
 
-    print("\n## 行业领域 (Domain)")
-    for category, keywords in analysis["domain"].items():
-        if keywords:
-            print(f"  {category}: {', '.join(keywords)}")
+    # Business metrics
+    metric_label = "业务指标" if is_zh else "Business Metrics"
+    print(f"\n## {metric_label}")
+    print(f"  {', '.join(analysis['business_metrics']) if analysis['business_metrics'] else '—'}")
 
-    print("\n## 经验要求 (Experience)")
-    for exp in analysis["experience"]:
-        print(f"  {exp['type']}: {exp['value']}")
+    # Requirements
+    req_label = "岗位要求" if is_zh else "Requirements"
+    print(f"\n## {req_label}")
+    for req in analysis["requirements"]:
+        print(f"  [{req['type']}] {req['value']}")
 
-    total = len(analysis["raw_keywords"])
-    print(f"\n## 关键词总数: {total}")
-    print(f"## 全部关键词: {', '.join(analysis['raw_keywords'])}")
-
-    print("\n" + "=" * 60)
+    # Summary
+    total_label = "关键词总数" if is_zh else "Total Keywords"
+    all_label = "全部关键词" if is_zh else "All Keywords"
+    print(f"\n## {total_label}: {len(analysis['all_keywords'])}")
+    print(f"## {all_label}: {', '.join(analysis['all_keywords'])}")
+    print(f"\n{sep}")
 
 
 def main():
@@ -229,15 +278,7 @@ def main():
     analysis = extract_keywords(text)
 
     if args.json:
-        # Convert defaultdict to dict for JSON serialization
-        output = {
-            "hard_skills": dict(analysis["hard_skills"]),
-            "soft_skills": dict(analysis["soft_skills"]),
-            "domain": dict(analysis["domain"]),
-            "experience": analysis["experience"],
-            "raw_keywords": analysis["raw_keywords"],
-        }
-        print(json.dumps(output, ensure_ascii=False, indent=2))
+        print(json.dumps(analysis, ensure_ascii=False, indent=2))
     else:
         print_report(analysis)
 
