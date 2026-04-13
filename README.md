@@ -57,21 +57,23 @@ Phase 2: Semantic Match Analysis (Auto)
 
 Phase 3: Interactive Adjustment (Dynamic Routing)
 ├── Step 3a: Dynamic routing based on match score
+│   ├── ≥92% + no hard gaps → Fast-Track mode (skip all checkpoints)
 │   ├── ≥90%: Skip checkpoints 2 + 5
 │   ├── 70-89%: Full flow
 │   ├── 50-69%: Extended probing
 │   └── <50%: Alignment check first
-├── Step 3b: Execute checkpoints
+├── Step 3b: Execute checkpoints (with memory pre-fill)
 │   ├── CP1: Experience selection
-│   ├── CP2: Content gaps (persona-aware probing)
-│   ├── CP3: Quantification (industry-aware)
+│   ├── CP2: Content gaps (persona-aware probing + cache recall)
+│   ├── CP3: Quantification (industry-aware + cache recall)
 │   ├── CP4: Wording upgrade (cultural tone slider + risk classification)
 │   └── CP5: Experience merge/split
 
 Phase 4: Generate Tailored Resume
 ├── Markdown draft → User review
 ├── Generate .docx (python-docx)
-└── Convert to PDF (pandoc)
+├── Convert to PDF (pandoc)
+└── Shadow resume (optional, when source ≠ target language)
 
 Phase 5: Version Audit
 ├── Step 5a: Save tailored resume
@@ -79,7 +81,7 @@ Phase 5: Version Audit
 ├── Step 5c: Sincerity check (reverse audit)
 │   ├── 5c-i: Interviewer persona construction
 │   ├── 5c-ii: Persona-based review (5 dimensions)
-│   └── 5c-iii: Interview question prep (for 🔴 Major issues)
+│   └── 5c-iii: Interview question prep + STAR sheet (for 🔴 Major issues)
 └── Step 5d: Generate audit log
     ├── diff_audit.py: source vs tailored diff
     ├── ats_checker.py: ATS compatibility report
@@ -93,6 +95,8 @@ resume-tailor/
 ├── SKILL.md                          # Skill definition & workflow
 ├── requirements.txt                  # Python dependencies
 ├── scripts/
+│   ├── main.py                       # Unified CLI entry point (parse/read-structured/diff/ats/full)
+│   ├── utils.py                      # Shared utilities (language, PII, date, link detection)
 │   ├── jd_parser.py                  # Hard requirement extraction + role detection + portfolio scan
 │   ├── diff_audit.py                 # Source vs tailored diff + structure-aware reading
 │   └── ats_checker.py                # ATS compatibility check + regional PII detection
@@ -201,13 +205,17 @@ PyPDF2>=3.0.0          # PDF reading (fallback)
 - Skill clustering for keyword grouping
 - Structure fallback: LLM semantic recovery when styles are lost
 - Dynamic routing based on match score
+- **Fast-Track mode**: skip all checkpoints when match ≥92% + no hard gaps
+- **Memory pre-fill**: recall past CP2/CP3 responses for similar JDs
 - Cross-credential equivalence with confidence levels
 - Cultural tone slider (6 regional presets)
 - Regional compliance audit (5 regions)
-- Interview readiness: mock questions for 🔴 Major issues
+- Interview readiness: mock questions + STAR prep sheet for 🔴 Major issues
 - ATS checker with regional profiles
 - Portfolio link detection (script-level)
 - PDF reader tracking with degradation warnings
+- **Shadow resume**: parallel translation when source ≠ target language
+- **Unified CLI**: main.py entry point, shared utils.py library
 
 ### v1.0
 - Basic keyword extraction and matching
