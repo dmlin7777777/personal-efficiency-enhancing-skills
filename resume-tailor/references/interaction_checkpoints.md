@@ -6,7 +6,7 @@ Detailed guidance for each interactive checkpoint in Phase 3.
 
 **When**: After match report is generated.
 
-**What to do**: Present a prioritized list of all master resume experiences, marked with match relevance.
+**What to do**: Present a prioritized list of all source resume experiences, marked with match relevance.
 
 **Format**:
 ```
@@ -39,7 +39,7 @@ JD 要求的 [能力/经验] 在简历中没有体现。你有相关的经历吗
 ```
 
 **Rules**:
-- Provide a concrete hint to help the user recall (e.g., "比如你在久其做项目经理时，有没有做过类似的数据分析工作？").
+- Provide a concrete hint to help the user recall (e.g., "比如你之前在做数据分析相关的工作时，有没有做过类似的 X 分析工作？").
 - If the user confirms they have relevant experience, ask for details (what did you do? what was the result? any numbers?).
 - If the user says no, mark this gap as "unaddressed" and move on. Do NOT fabricate content.
 

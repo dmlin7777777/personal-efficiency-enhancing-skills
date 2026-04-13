@@ -1,8 +1,8 @@
 """
-Diff Audit - Compare master and tailored resumes, generate change summary.
+Diff Audit - Compare source and tailored resumes, generate change summary.
 
 Usage:
-    python diff_audit.py <master_md_path> <tailored_md_path>
+    python diff_audit.py --master <source_md_path> --tailored <tailored_md_path>
 
 Output:
     Markdown audit log with categorized changes.
@@ -42,16 +42,16 @@ def classify_change(diff_line: str) -> str:
     return "content_change"
 
 
-def generate_audit(master_path: str, tailored_path: str, company: str = "", role: str = "", jd_source: str = "") -> str:
-    """Generate a full audit log comparing master and tailored resumes."""
+def generate_audit(master_path: str, tailored_path: str, company: str = "", role: str = "", jd_source: str = "", source_name: str = "source resume") -> str:
+    """Generate a full audit log comparing source and tailored resumes."""
 
-    master_lines = read_lines(master_path)
+    source_lines = read_lines(master_path)
     tailored_lines = read_lines(tailored_path)
 
     # Generate unified diff
     diff = list(difflib.unified_diff(
-        master_lines, tailored_lines,
-        fromfile="master", tofile="tailored",
+        source_lines, tailored_lines,
+        fromfile="source", tofile="tailored",
         lineterm=""
     ))
 
@@ -106,7 +106,7 @@ def generate_audit(master_path: str, tailored_path: str, company: str = "", role
         report_lines.append(f"- **JD 来源**: {jd_source}")
     
     report_lines.extend([
-        f"- **基于版本**: resume_master.docx",
+        f"- **基于版本**: {source_name}",
         f"",
         f"## 变更统计",
         f"",
@@ -159,15 +159,16 @@ def generate_audit(master_path: str, tailored_path: str, company: str = "", role
 
 def main():
     parser = argparse.ArgumentParser(description="Resume Diff Audit")
-    parser.add_argument("master", help="Path to master resume (Markdown)")
-    parser.add_argument("tailored", help="Path to tailored resume (Markdown)")
+    parser.add_argument("--master", help="Path to source resume (Markdown)")
+    parser.add_argument("--tailored", help="Path to tailored resume (Markdown)")
     parser.add_argument("--company", default="", help="Target company name")
     parser.add_argument("--role", default="", help="Target role name")
     parser.add_argument("--jd-source", default="", help="JD URL or source description")
+    parser.add_argument("--source-name", default="source resume", help="Display name of the source resume file")
     parser.add_argument("--output", default="", help="Output file path (default: stdout)")
     args = parser.parse_args()
 
-    report = generate_audit(args.master, args.tailored, args.company, args.role, args.jd_source)
+    report = generate_audit(args.master, args.tailored, args.company, args.role, args.jd_source, args.source_name)
 
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:

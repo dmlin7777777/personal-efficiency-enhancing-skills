@@ -1,11 +1,11 @@
 ---
 name: resume-tailor
-description: This skill should be used when the user wants to tailor their resume to a specific job description (JD). It analyzes JD keywords, matches against the master resume, provides adjustment suggestions with interactive checkpoints, and generates a tailored resume in PDF format with version audit.
+description: This skill should be used when the user wants to tailor their resume to a specific job description (JD). It analyzes JD keywords, matches against the source resume, provides adjustment suggestions with interactive checkpoints, and generates a tailored resume in PDF format with version audit.
 ---
 
 # Resume Tailor
 
-Analyze a job description and tailor the master resume to match, with interactive checkpoints for content decisions and full version audit.
+Analyze a job description and tailor the source resume to match, with interactive checkpoints for content decisions and full version audit.
 
 ## Trigger Phrases
 

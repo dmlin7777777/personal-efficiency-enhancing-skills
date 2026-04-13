@@ -16,7 +16,7 @@ resume/history/YYYY-MM-DD_{company}_{role}_audit.md
 - **日期**: YYYY-MM-DD
 - **目标岗位**: {company} - {role}
 - **JD 来源**: {URL 或 "用户粘贴"}
-- **基于版本**: resume_master.docx
+- **基于版本**: {source_resume_filename}
 
 ## 匹配度摘要
 
