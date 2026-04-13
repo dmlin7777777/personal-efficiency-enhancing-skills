@@ -1,95 +1,215 @@
-# Personal Efficiency Enhancing Skills / 个人效率增强 Skills
+# Resume Tailor v2
 
-A collection of AI assistant Skills designed to enhance personal workflow efficiency.
-适用于 [WorkBuddy](https://www.codebuddy.cn/) / Claw 等 AI 助手平台的 Skills 合集。
+An AI-powered resume tailoring skill with hybrid analysis (script + LLM), semantic matching with confidence levels, dynamic checkpoint routing, and cross-cultural adaptation.
 
----
+基于 AI 的简历定制技能：混合分析（脚本 + LLM）、带置信度的语义匹配、动态路由、跨文化适配。
 
-## Skills
-
-### Resume Tailor (`resume-tailor/`)
-
-**Tailor your resume for any job description with one command.**
-**一句话概括**：输入 JD → 自动匹配分析 → 交互式调整简历 → 生成 PDF + 版本审计。
-
-#### Features / 核心功能
-
-- **JD Keyword Extraction / JD 关键词提取**: Automatically parses JD text to extract hard skills, soft skills, domain keywords, and experience requirements / 自动解析 JD 文本，分类提取硬技能、软技能、行业背景、经验要求
-- **Resume Matching / 简历匹配分析**: Analyzes how well your source resume matches the target JD / 对比源简历与 JD 关键词，输出直接匹配 / 可关联 / 缺口三类报告
-- **Interactive Adjustment / 交互式调整**: 6 decision points where you can guide the tailoring process / 6 个决策介入点，你可以全程引导调整方向：
-  1. Experience selection — keep, demote, or remove / 经历取舍
-  2. Wording upgrades — fact-check before escalating / 措辞升级（确认后再优化）
-  3. Quantification gaps — add missing numbers / 量化补充
-  4. Content gaps — prompt you to recall relevant experience / 内容缺口（引导回忆）
-  5. Merge/split decisions — combine or split experiences / 经历合并/拆分
-  6. Final confirmation before PDF generation / 最终确认
-- **Version Audit / 版本审计**: Every tailored version is logged with a full diff against the master / 每次生成保留完整 diff 记录，方便回溯
-- **PDF Output / PDF 输出**: Markdown preview → confirmation → .docx → PDF
-
-#### Installation / 安装
-
-Compatible with WorkBuddy / Claw, Cursor, Cline, and other AI assistant platforms.
-适用于 WorkBuddy / Claw、Cursor、Cline 及其他兼容平台。
-
-**Method 1: Copy directly / 直接复制（推荐）**
-
-Copy the `resume-tailor/` folder to your skills directory:
-将 `resume-tailor/` 文件夹复制到你的 skills 目录：
-
-| Platform / 平台 | Skills Directory / 目录路径 |
-|---|---|
-| **WorkBuddy / Claw** | `~/.workbuddy/skills/resume-tailor/` |
-| **Cursor** | `~/.cursor/skills/resume-tailor/` |
-| **Cline** | `~/.cline/skills/resume-tailor/` |
-| **Generic / 通用** | `.workbuddy/skills/resume-tailor/` (project root) |
-
-> `~` refers to your home directory. On Windows: `C:\Users\<username>\`
-
-**Method 2: Git Clone**
-
-```bash
-git clone https://github.com/dmlin7777777/personal-efficiency-enhancing-skills.git
-cp -r personal-efficiency-enhancing-skills/resume-tailor ~/.workbuddy/skills/
-```
-
-#### Usage / 使用方式
-
-After installation, prompt your AI assistant:
-安装后，在 AI 助手中输入：
+## Quick Start / 快速使用
 
 ```
-Help me tailor my resume for this JD: [paste JD text or URL]
-帮我针对这个 JD 调简历：[粘贴 JD 文本或 URL]
+"帮我针对这个 JD 调简历" / "tailor resume to this JD"
 ```
 
-#### Dependencies / 前置依赖
+Provide a JD (URL or text) and a resume file (.docx / .pdf / .txt). The skill will:
 
-| Dependency | Purpose / 用途 | Install / 安装方式 |
-|---|---|---|
-| `python-docx` | Read and generate .docx files / 读取和生成 .docx | `pip install python-docx` |
-| `pandoc` | Convert .docx to PDF / .docx 转 PDF | [Download](https://pandoc.org/installing.html) |
+1. Extract hard requirements via script (years, degree, certifications, etc.)
+2. Extract semantic keywords via LLM (skills, soft skills, domain knowledge)
+3. Match resume against JD with confidence levels
+4. Guide you through interactive adjustments
+5. Generate a tailored resume with full audit trail
 
-#### File Structure / 文件结构
+## Architecture / 架构
+
+### Design Principles / 设计原则
+
+1. **Script extracts, LLM judges / 脚本提取，LLM 判断** — Scripts do feature extraction only (numbers, dates, certifications); LLM handles semantic matching and cross-credential equivalence
+2. **Feature Presence ≠ Definitive Match / 存在 ≠ 匹配** — Scripts report features found; LLM decides if they meet requirements
+3. **Generic, not hardcoded / 通用化** — No China/US-centric assumptions; works with any credential system, date format, or language
+4. **Culture-adaptive / 文化自适应** — Different norms, tone, and PII rules per target region
+
+### 5-Phase Pipeline / 五阶段流水线
+
+```
+Phase 1: Hybrid JD Analysis (Auto)
+├── Step 1a: Accept JD input (URL/text)
+├── Step 1b: Script feature extraction (jd_parser.py)
+│   ├── Experience years, degree, language tests, certifications
+│   ├── GPA, work authorization, security clearance
+│   ├── Resume date ranges, portfolio links scan
+│   └── Position weight signal (first 20% = dealbreakers)
+└── Step 1c: LLM semantic extraction
+    ├── 1c-i: Role context detection (level + region + doc type + work arrangement)
+    ├── 1c-ii: Keyword extraction + skill clustering
+    └── 1c-iii: Cross-validation with script output
+
+Phase 2: Semantic Match Analysis (Auto)
+├── Step 2a: Structure-aware resume reading
+│   ├── read_docx_structured() with style detection
+│   ├── Structure fallback: LLM semantic recovery if Normal > 80%
+│   ├── Format risk detection + portfolio link check
+│   └── Regional ATS compatibility check (ats_checker.py)
+└── Step 2b: Semantic matching
+    ├── Direct / Implicit (High/Med/Low) / Gap
+    ├── Cross-credential equivalence mapping
+    ├── Cultural soft skill translation
+    ├── Skill cluster matching
+    └── Match score calculation
+
+Phase 3: Interactive Adjustment (Dynamic Routing)
+├── Step 3a: Dynamic routing based on match score
+│   ├── ≥90%: Skip checkpoints 2 + 5
+│   ├── 70-89%: Full flow
+│   ├── 50-69%: Extended probing
+│   └── <50%: Alignment check first
+├── Step 3b: Execute checkpoints
+│   ├── CP1: Experience selection
+│   ├── CP2: Content gaps (persona-aware probing)
+│   ├── CP3: Quantification (industry-aware)
+│   ├── CP4: Wording upgrade (cultural tone slider + risk classification)
+│   └── CP5: Experience merge/split
+
+Phase 4: Generate Tailored Resume
+├── Markdown draft → User review
+├── Generate .docx (python-docx)
+└── Convert to PDF (pandoc)
+
+Phase 5: Version Audit
+├── Step 5a: Save tailored resume
+├── Step 5b: Regional compliance audit (5 region PII rules)
+├── Step 5c: Sincerity check (reverse audit)
+│   ├── 5c-i: Interviewer persona construction
+│   ├── 5c-ii: Persona-based review (5 dimensions)
+│   └── 5c-iii: Interview question prep (for 🔴 Major issues)
+└── Step 5d: Generate audit log
+    ├── diff_audit.py: source vs tailored diff
+    ├── ats_checker.py: ATS compatibility report
+    └── Compile final audit report (audit_log_template.md)
+```
+
+## Files / 文件结构
 
 ```
 resume-tailor/
-├── SKILL.md                              # Main skill definition / Skill 主定义
+├── SKILL.md                          # Skill definition & workflow
+├── requirements.txt                  # Python dependencies
 ├── scripts/
-│   ├── jd_parser.py                      # JD keyword extraction / JD 关键词提取
-│   └── diff_audit.py                     # Resume diff audit / 新旧简历对比审计
-├── references/
-│   ├── interaction_checkpoints.md        # 6 interaction checkpoints / 交互介入点指引
-│   └── audit_log_template.md             # Audit log template / 版本变更日志模板
-└── requirements.txt                      # Python dependencies / Python 依赖
+│   ├── jd_parser.py                  # Hard requirement extraction + role detection + portfolio scan
+│   ├── diff_audit.py                 # Source vs tailored diff + structure-aware reading
+│   └── ats_checker.py                # ATS compatibility check + regional PII detection
+└── references/
+    ├── interaction_checkpoints.md    # Interactive checkpoint templates
+    └── audit_log_template.md         # Audit log structure template
 ```
 
----
+## Scripts / 脚本说明
 
-## Contributing / 贡献
+### jd_parser.py — Hard Feature Extractor / 硬特征提取器
 
-Issues and PRs are welcome. If you improve these Skills, feel free to fork and submit a PR.
-欢迎提交 Issue 和 PR。如果你基于这些 Skills 做了改进，欢迎 Fork 后提 PR。
+Extracts structured features from JD and optionally matches against resume.
 
-## License
+```bash
+# JD only
+python scripts/jd_parser.py --file jd.txt --json
 
-MIT
+# JD + resume matching
+python scripts/jd_parser.py --file jd.txt --resume resume.docx --json
+```
+
+**Extracts / 提取内容**:
+- Experience years (flexible prefixes: "at least", "不少于", "minimum")
+- Degree requirements (tiered: doctoral/master/bachelor/associate)
+- Language tests (IELTS, TOEFL, TOEIC, JLPT, TOPIK, CET, CEFR)
+- Certifications (generic capital-acronym pattern)
+- GPA scores, work authorization, security clearance
+- Resume date ranges, role type detection, portfolio link scanning
+
+**Output / 输出**: JSON with `hard_requirements`, `summary`, `resume_date_ranges`, `portfolio`, `pdf_reader_used`
+
+### diff_audit.py — Diff & Structure Reader / 差异与结构读取
+
+Reads .docx with style awareness and compares source vs tailored resume.
+
+```bash
+# Structure-aware read
+python scripts/diff_audit.py --read-structured resume.docx
+
+# Diff comparison
+python scripts/diff_audit.py --source-docx source.docx --tailored-docx tailored.md --json
+```
+
+**Features / 功能**:
+- `read_docx_structured()`: paragraph style detection (Heading/Normal/ListBullet/TableCell)
+- Three-level risk classification per change
+- `--json` output for pipeline integration
+- `source_structure` for Phase 2 context injection
+
+### ats_checker.py — ATS Compatibility Checker / ATS 兼容性检查
+
+Validates resume against ATS parsing expectations with regional profiles.
+
+```bash
+python scripts/ats_checker.py --resume tailored.md \
+    --keywords "Python,SQL,AWS" --region north_america --json
+```
+
+**10 Checks / 10 项检查**:
+Tables, Images, Emojis, Non-standard bullets, Missing sections, Contact info, Date inconsistency, Long bullets, Missing keywords, Regional PII
+
+**5 Regional Profiles / 5 个区域配置**:
+| Region | Strict | Forbidden PII |
+|--------|--------|---------------|
+| north_america | ✅ | photo, age, gender, marital, religion, nationality, salary, address |
+| uk_ireland | ✅ | photo, age, gender, marital, religion, NI number |
+| dach | ❌ | religion, political affiliation |
+| east_asia | ❌ | none |
+| global | ✅ | same as north_america |
+
+## Regional Adaptation / 区域适配
+
+The system auto-detects target region from JD signals and adapts:
+
+- **Phase 1**: Adjusts keyword weights (Campus vs Social vs Executive)
+- **Phase 2**: Applies cultural soft skill translation, cross-credential equivalence
+- **Phase 3**: Routes to region-appropriate checkpoint questioning
+- **Phase 4**: Determines output language (JD language, not resume language)
+- **Phase 5**: Runs region-specific compliance audit + ATS profile
+
+## Cross-Credential Equivalence / 跨证书等价
+
+Scripts extract credentials; LLM maps equivalents with confidence:
+
+| JD Asks | Resume Has | Judgment |
+|---------|-----------|----------|
+| CET-6 | IELTS 7.5 | ✅ Implicit (High) — exceeds requirement |
+| TOEFL 100 | IELTS 7.0 | 🔄 Implicit (Med) — approximate range |
+| IELTS 7.0 | CET-4 | ⚪ Gap — below equivalent |
+
+## Dependencies / 依赖
+
+```
+python-docx>=0.8.11    # .docx read/write + style detection
+pdfplumber>=0.9.0      # PDF reading (primary)
+PyPDF2>=3.0.0          # PDF reading (fallback)
+```
+
+`pandoc` is optional for PDF generation. If missing, the skill outputs .docx directly.
+
+## Version History / 版本历史
+
+### v2.1 (Current)
+- Hybrid analysis: script extracts features, LLM does semantic matching
+- Skill clustering for keyword grouping
+- Structure fallback: LLM semantic recovery when styles are lost
+- Dynamic routing based on match score
+- Cross-credential equivalence with confidence levels
+- Cultural tone slider (6 regional presets)
+- Regional compliance audit (5 regions)
+- Interview readiness: mock questions for 🔴 Major issues
+- ATS checker with regional profiles
+- Portfolio link detection (script-level)
+- PDF reader tracking with degradation warnings
+
+### v1.0
+- Basic keyword extraction and matching
+- Interactive checkpoints
+- Diff audit
