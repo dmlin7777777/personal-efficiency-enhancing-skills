@@ -200,22 +200,25 @@ PyPDF2>=3.0.0          # PDF reading (fallback)
 
 ## Version History / 版本历史
 
-### v2.1 (Current)
+### v2.1 (Current) — Interaction & Depth Optimizations
+- **Fast-Track mode**: skip all checkpoints when match ≥92% + no hard gaps
+- **Memory pre-fill**: recall past CP2/CP3 responses for similar JDs (user_profile_cache.json)
+- **STAR prep sheet**: structured S/T/A/R interview guide for 🔴 Major changes
+- **Shadow resume**: parallel translation when source ≠ target language
+- **Unified CLI**: main.py entry point, shared utils.py library (deduplicated ~210 lines)
+
+### v2.0 — Core Rewrite
 - Hybrid analysis: script extracts features, LLM does semantic matching
 - Skill clustering for keyword grouping
 - Structure fallback: LLM semantic recovery when styles are lost
 - Dynamic routing based on match score
-- **Fast-Track mode**: skip all checkpoints when match ≥92% + no hard gaps
-- **Memory pre-fill**: recall past CP2/CP3 responses for similar JDs
 - Cross-credential equivalence with confidence levels
 - Cultural tone slider (6 regional presets)
 - Regional compliance audit (5 regions)
-- Interview readiness: mock questions + STAR prep sheet for 🔴 Major issues
-- ATS checker with regional profiles
+- Interview readiness: mock questions for 🔴 Major issues
+- ATS checker with regional profiles + 10-item check
 - Portfolio link detection (script-level)
 - PDF reader tracking with degradation warnings
-- **Shadow resume**: parallel translation when source ≠ target language
-- **Unified CLI**: main.py entry point, shared utils.py library
 
 ### v1.0
 - Basic keyword extraction and matching
