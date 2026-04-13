@@ -14,13 +14,18 @@ Analyze a job description and tailor the master resume to match, with interactiv
 - "这份简历匹配这个岗位吗" / "is my resume a good fit"
 - Any JD text or URL provided with resume adjustment intent
 
-## Master Resume Location
+## Resume Input
 
-```
-C:\Users\12932\WorkBuddy\Claw\resume\resume_master.docx
-```
+On first run, **ask the user to provide their resume file path** (absolute path to .docx, .pdf, or .txt). Acceptable formats:
+- `.docx` — preferred, preserves formatting
+- `.pdf` — readable but harder to preserve layout
+- `.txt` / `.md` — plain text
 
-All tailored versions derive from this file. Never modify the master.
+Store the path in memory for the session. If the user provides a new path, update accordingly.
+
+All tailored versions derive from this source file. **Never modify the original.**
+
+If no path is provided and no resume file is found in the workspace, guide the user to place one.
 
 ## Workflow
 
@@ -38,8 +43,8 @@ All tailored versions derive from this file. Never modify the master.
 
 ### Phase 2: Resume Matching (Auto)
 
-1. **Read master resume** — Extract all content from `resume_master.docx`.
-2. **Match analysis** — Compare master resume content against JD keywords:
+1. **Read source resume** — Extract all content from the user-provided resume file.
+2. **Match analysis** — Compare resume content against JD keywords:
    - Direct match: skill/experience explicitly mentioned in resume
    - Implicit match: experience demonstrates the skill but not named explicitly
    - Gap: JD requirement with no corresponding resume content
@@ -66,7 +71,7 @@ For each checkpoint, present the question clearly, wait for user response, then 
 **Order of checkpoints**:
 
 1. **Experience Selection** — Which experiences to keep, remove, or reorder based on match report.
-2. **Content Gaps** — For each gap identified, ask the user if they have relevant experience not in master.
+2. **Content Gaps** — For each gap identified, ask the user if they have relevant experience not in the source resume.
 3. **Quantification** — For bullets lacking numbers, prompt the user to supply metrics.
 4. **Wording Upgrade** — Present proposed wording changes (e.g., "参与" → "主导"), confirm with user.
 5. **Experience Merge/Split** — If multiple entries can be combined or one should be split, propose and confirm.
@@ -82,18 +87,17 @@ For each checkpoint, present the question clearly, wait for user response, then 
 
 ### Phase 5: Version Audit (Auto)
 
-1. **Save tailored Markdown** to `resume/history/YYYY-MM-DD_{company}_{role}.md`.
-2. **Generate audit log** using `scripts/diff_audit.py` — compare master vs tailored version, output change summary.
-3. **Save audit log** to `resume/history/YYYY-MM-DD_{company}_{role}_audit.md`.
+1. **Save tailored Markdown** to a `history/` subdirectory relative to the source resume (e.g., `resume/history/YYYY-MM-DD_{company}_{role}.md`).
+2. **Generate audit log** using `scripts/diff_audit.py` — compare source vs tailored version, output change summary.
+3. **Save audit log** alongside the tailored version.
 
-## Output Structure
+## Output Structure (Example)
 
 ```
-resume/
-├── resume_master.docx          # NEVER modify
-├── resume_产品.docx/.pdf       # Existing tailored versions
-├── resume_数据.docx/.pdf
-└── history/                    # Version-tracked tailored resumes
+{resume_directory}/
+├── resume_source.docx          # User's original — NEVER modify
+├── resume_产品.pdf              # Existing tailored versions (optional)
+└── history/                     # Version-tracked tailored resumes
     ├── 2026-04-13_腾讯_广告产品运营.md
     ├── 2026-04-13_腾讯_广告产品运营_audit.md
     ├── 2026-04-13_腾讯_广告产品运营.pdf
@@ -102,7 +106,7 @@ resume/
 
 ## Error Handling
 
-- If `resume_master.docx` is not found: ask user to confirm the path.
+- If no resume file is found: ask user to provide the path.
 - If JD URL fails to fetch: ask user to paste JD text directly.
 - If pandoc is not installed: install it before PDF conversion.
 - If python-docx is not installed: install it before .docx generation.
