@@ -4,76 +4,81 @@
 
 **AI-Powered Resume Tailoring — Not a Polisher, a Coach**
 
+*This project follows a "Coach, not Polisher" philosophy.*
+
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 </div>
 
 ---
 
-## Why Different?
+## Why You Need It?
 
-> **🪞 Not just rewriting — it coaches.** Built-in interviewer persona reviews your resume from the attacker's perspective before you send it out.
->
-> **🚫 No AI fluff.** The Anti-Filler Rule forces every bullet to carry measurable outcomes. Vague phrases like "achieved intelligent automation" get rejected automatically.
->
-> **🌍 Works everywhere.** Auto-adapts to regional hiring norms — remove your photo for North America, explain career gaps for Germany, tone down assertiveness for East Asia.
+Most AI resume tools **rewrite** your bullets to sound fancy. This one **coaches** you to make them real.
 
----
+| Traditional AI Rewrite | Resume Tailor |
+|---|---|
+| ❌ "Significantly improved data analysis efficiency, received team recognition" | ✅ "Built automated reconciliation tool, reducing monthly close cycle from **5 days to 6 hours** across **12 business lines**" |
+| Fills vague adjectives when data is missing | Asks targeted questions — or keeps original wording if you can't quantify |
+| Optimistic about your role ("Led" everything) | Challenges every claim: *"Were you the decision maker?"* |
+| One-size-fits-all output | Adapts tone, format, and privacy rules per target region |
 
-## Features
-
-### 🎯 Semantic-Level Matching
-Not keyword stuffing. Recognizes that "high stress tolerance" aligns with "Thrives in fast-paced environments" and "data-driven decision making" maps to "Data-informed strategic thinking" — with confidence scores.
-
-### ⚖️ Cross-Credential Alignment
-JD asks for CET-6 but you only have IELTS 7.5? It tells you they're equivalent — and keeps the stronger credential on your resume.
-
-### 🔍 Reverse Interview Audit
-Generates mock interview questions targeting your resume's weak spots, so you can prepare before the interviewer challenges you.
+**The difference**: A polished lie gets rejected at the interview. A coached truth gets you hired.
 
 ---
 
-#### 📝 Example: What gets flagged?
+## What You Get
 
-**Your bullet:** "Spearheaded the digital transformation initiative, significantly improving operational efficiency."
+You don't just get a tailored resume. You get a **job search toolkit**.
 
-**Mock questions you'd get:**
+### ✅ Tailored Resume (.docx)
+Optimized for the specific JD and target region — ATS-compatible, culturally calibrated, factually accurate.
 
-> 1. *"Spearheaded" — what was your actual role vs. other team members? Were you the final decision maker?*
-> 2. *"Digital transformation" — what systems were involved? What was the before-state?*
-> 3. *"Significantly improving efficiency" — by how much? 20%? 50% What metric are we talking about — time saved, cost reduced, throughput increased?*
-> 4. If you can't answer #3 with a number, the Anti-Filler Rule kicks in and rewrites this without the vague claim.
+### 📊 Audit Log
+Every modification is tracked:
+- Match score with confidence levels for each JD requirement
+- Hard gaps flagged (missing certifications, experience thresholds)
+- Compliance warnings (photo/age removal by region)
+
+### 🎙️ Interview Prep Pack
+For every significant change on your resume, the system generates:
+- **Mock Questions** — what interviewers will likely challenge you on
+- **STAR Notes** — structured talking points so you can defend each bullet confidently
 
 ---
 
-### 🚫 Privacy Compliance
-Applying to North America? Automatically flags your photo and birthday for removal. Germany? Reminds you to explain career gaps.
+## Core Principles
 
-### 📊 Anti-Filler Enforcement
-Every bullet must follow: **Action + Object + Measurable Outcome**. If you can't provide numbers, it asks you targeted questions — and if you still can't, it keeps your original wording rather than inventing fake metrics.
+These are non-negotiable hard rules baked into every run:
+
+### 🚫 Anti-Filler Rule
+Every bullet must follow: **Action + Object + Measurable Outcome**
+- No numbers? The system asks progressive probing questions.
+- Still no numbers after 2 rounds? Keep original wording — never invent metrics.
+- **Rule: A vague outcome is WORSE than no outcome.**
+
+### 🪞 Reverse Audit
+Before delivery, an interviewer persona reviews every bullet from the attacker's perspective. Role inflation, logical leaps, and buzzword salads get caught before HR sees them.
+
+### ⏳ Fact Conservation
+Work experiences stay in **strict reverse chronological order**. No reordering by relevance — only keep or hide.
 
 ### 🌐 Cultural Tone Slider
-Adjusts verb intensity and self-promotion level based on target region — assertive for North America, collaborative for East Asia, modest for Nordics.
+Verb intensity auto-adjusts: assertive (North America) → collaborative (East Asia) → modest (Nordics). Same facts, different presentation.
 
----
-
-## Quick Start
-
-```
-"Tailor my resume for this JD"
-```
-
-Provide a **JD** (URL or pasted text) and your **resume** (.docx / .pdf / .txt). That's it.
-
-The skill handles everything:
-1. **Research** — scans current hiring expectations for the role
-2. **Match** — compares your resume against JD requirements with confidence levels
-3. **Advise** — proposes what to keep, drop, rewrite, or quantify (you confirm or override)
-4. **Deliver** — generates a tailored resume with built-in reverse audit and interview prep
+### ⚖️ Cross-Credential Alignment
+IELTS 7.5 ≈ CET-6 550+. The system maps credentials across regions and keeps the strongest one visible.
 
 ---
 
 ## How It Works
+
+```
+Phase 1 — Context & Research     Understand the role, research the company
+Phase 2 — Semantic Matching      Match your experience against JD requirements
+Phase 3 — Interactive Adjustment Review suggestions, confirm or override
+Phase 4 — Audit & Delivery       Final compliance check, mock questions, output
+```
 
 | Phase | What Happens | Your Role |
 |-------|-------------|-----------|
@@ -83,6 +88,17 @@ The skill handles everything:
 | **4. Audit** | Compliance check, interviewer-persona review, mock questions, generate .docx | Final review |
 
 Every suggestion comes with a **concrete recommendation** — you confirm or override, never decide from scratch.
+
+---
+
+## Quick Start
+
+```bash
+# Provide a JD and your resume
+"Tailor my resume for this JD"
+```
+
+That's it. The skill handles research, matching, adjustment, and audit in sequence.
 
 ---
 
@@ -112,30 +128,23 @@ resume-tailor/
 <details>
 <summary>⚙️ Script Usage</summary>
 
-### jd_parser.py — Extract structured features from JD
 ```bash
 # JD only
 python scripts/jd_parser.py --file jd.txt --json
 
 # JD + resume matching
 python scripts/jd_parser.py --file jd.txt --resume resume.docx --json
-```
 
-### main.py — CLI entry point
-```bash
 # Structure-aware resume reading
 python scripts/main.py read-structured --resume resume.docx
 
-# Diff comparison (source vs tailored)
-python scripts/main.py diff --source-docx source.docx --tailored tailored.md --company "Company" --role "Role" --json
-```
+# Diff comparison
+python scripts/main.py diff --source-docx source.docx --tailored tailored.md
 
-### ats_checker.py — ATS compatibility check
-```bash
-python scripts/ats_checker.py --resume tailored.md --keywords "Python,SQL,AWS" --region north_america --json
+# ATS compatibility check
+python scripts/ats_checker.py --resume tailored.md --region north_america --json
 ```
-
-**Regional profiles**: north_america, uk_ireland, dach, east_asia, global
+**Regions:** north_america, uk_ireland, dach, east_asia, global
 
 </details>
 
@@ -147,7 +156,6 @@ python-docx>=0.8.11    # .docx read/write
 pdfplumber>=0.9.0      # PDF reading (primary)
 PyPDF2>=3.0.0          # PDF reading (fallback)
 ```
-
 Optional: `pandoc` for PDF generation.
 
 </details>
@@ -157,12 +165,9 @@ Optional: `pandoc` for PDF generation.
 ## Version History
 
 ### v2.4 (Current) — Structural Refactor
-- 4-stage pipeline (consolidated from 5), 3-tier routing, unified extraction
+- 4-stage pipeline, 3-tier routing, unified extraction
 - Anti-Filler Rule, Propose-don't-ask principle, Reverse Audit
 - Shadow Resume moved to on-demand
-
-### v2.3 — Robustness & UX Hardening
-- Market research, experience order hard rule, page limit, Anti-Filler Rule
 
 [Full changelog → CHANGELOG.md](CHANGELOG.md)
 
