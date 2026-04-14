@@ -201,7 +201,16 @@ PyPDF2>=3.0.0          # PDF reading (fallback)
 
 ## Version History / 版本历史
 
-### v2.2 (Current) — Global Perspective Enhancements
+### v2.3 (Current) — Robustness & UX Hardening
+- **Market research step**: Collect company + role name → web search for current hiring preferences before analysis
+- **Experience order hard rule**: Strict reverse chronological order for work/internship — only inclusion/exclusion allowed
+- **Page limit hard rule**: Ask user's page target, calculate space budget, warn before over-filling
+- **Markdown preservation**: Phase 4 Markdown is saved as a deliverable (not temp) — required for Phase 5 diff audit
+- **Anti-Filler Rule**: CP3 now prohibits vague outcome descriptors ("实现智能化" etc.) — progressive probing forces quantification; fallback keeps original wording
+- **Propose-don't-ask principle**: Every user-facing question must include a concrete recommendation; the user confirms or overrides, never decides from scratch
+- **Fixed `--read-structured` command**: Corrected SKILL.md to use `main.py read-structured` instead of broken `diff_audit.py` path
+
+### v2.2 — Global Perspective Enhancements
 - **Tech stack freshness**: LLM identifies aging/legacy technologies and suggests modern equivalents
 - **Timeline gap detection**: Script parses date ranges, flags gaps ≥ 3 months (critical for DACH region)
 - **ATS modernity scaling**: Table/format severity adjusts by region (modern ATS like Greenhouse/Lever → low risk)

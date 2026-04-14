@@ -5,34 +5,68 @@ Detailed guidance for each interactive checkpoint in Phase 3.
 
 ---
 
+## Global Interaction Principle / 全局交互原则
+
+**When the LLM needs user input or decisions, NEVER ask an open question alone — ALWAYS pair the question with a concrete recommended option.**
+**当需要用户做选择时，绝对不要只抛出问题——必须同时给出具体建议方案。**
+
+**❌ Bare question / 光提问不给建议**：
+```
+你想调整保留哪些吗？
+Do you want to adjust which ones to keep?
+
+Does this make sense?
+这个合并合理吗？
+```
+
+**✅ Question + recommendation / 问题 + 建议**：
+```
+你想调整保留哪些吗？我的建议是去掉 [X]，因为 [reason]。
+Do you want to adjust which ones to keep? I recommend dropping [X] because [reason].
+
+这个合并合理吗？我觉得合并后能突出 [capability]，但如果你觉得分开讲更清晰也可以保留。
+Does this merge make sense? I think merging highlights [capability], but keeping them separate is also fine if you prefer clarity.
+```
+
+**When recommendations are not appropriate / 不适合给建议的情况**：
+- Asking for factual information (dates, numbers, names) / 问事实信息时不需要建议
+- The user has multiple equally valid paths / 用户面前多条路都合理时 → 给出每个选项的 tradeoff，而非单一推荐
+
+**Rule**: The user should never feel like they're doing the LLM's job. The LLM should always show its thinking, then ask for confirmation or override.
+**原则**：用户不应该觉得在帮 AI 做决策。LLM 应该先展示自己的分析和建议，再请用户确认或否决。
+
+---
+
 ## Checkpoint 1: Experience Selection / 经历取舍
 
 **When**: After match report is generated. / 匹配报告生成后。
 
-**What to do**: Present a prioritized list of all source resume experiences, marked with match relevance.
-按 JD 匹配度排列所有经历，标注相关性等级。
+**What to do**: Present ALL source resume experiences in **reverse chronological order** (most recent first), marked with match relevance. The ONLY allowed operation is INCLUSION or EXCLUSION — never reorder.
+按**时间倒序**（最近的在前）列出所有经历，标注 JD 匹配度。唯一允许的操作是**取舍**，绝对不可重排。
 
 **Format**:
 ```
-Based on JD match, suggested experience priority:
-基于 JD 匹配度，建议的经历排序：
+Based on JD match, here are your experiences in reverse chronological order:
+基于 JD 匹配度，以下是你的全部经历（按时间倒序）：
 
-1. ✅ [Experience A] — Direct match: [keyword]
+1. ✅ [Experience A] (2024.7-2025.6) — Direct match: [keyword]
    — 直接匹配 JD 要求的 [关键词]
-2. ✅ [Experience B] — Direct match: [keyword]
+2. ✅ [Experience B] (2023.10-2024.3) — Direct match: [keyword]
    — 直接匹配 JD 要求的 [关键词]
-3. 🔄 [Experience C] — Relatable to [keyword] (suggest rephrasing)
-   — 可关联到 JD 要求的 [关键词]（建议调整措辞）
-4. ⚪ [Experience D] — Weak relevance, suggest demote or remove
-   — 与 JD 关联较弱，建议弱化或移除
+3. ⚠️ [Experience C] (2022.7-2022.10) — Weak relevance, can include or drop
+   — 与 JD 关联较弱，可保留可去掉
+4. ❌ [Experience D] (2021.9-2022.1) — Weak relevance, suggest dropping
+   — 与 JD 关联较弱，建议去掉
 
-Do you agree with this order? / 你同意这个排序吗？Any adjustments?
-有没有想调整的？
+Do you want to adjust which ones to keep? Any to add or remove?
+你想调整保留哪些吗？有要加的或去掉的吗？
 ```
 
 **Rules**:
-- Never silently remove an experience. Always present the proposal and wait for confirmation. / 绝对不要静默删除经历，必须展示方案并等待确认。
-- If the user wants to keep a "weak match" experience, ask why — it may reveal hidden relevance. / 如果用户想保留弱匹配经历，追问原因——可能存在隐性关联。
+- NEVER change the order of work/internship entries. They MUST stay in reverse chronological order. / 绝对不要改变工作/实习经历的顺序，必须保持时间倒序。
+- NEVER silently remove an experience. Always present the proposal and wait for confirmation. / 绝对不要静默删除经历，必须展示方案并等待确认。
+- If the user wants to keep a "weak match" experience, accept it — but calculate space budget impact (see Global Hard Rules). / 如果用户想保留弱匹配经历，接受——但计算空间预算影响。
+- Personal projects / side projects CAN be ordered by relevance (not strictly chronological). / 个人项目/副业可以按相关性排序。
 
 ---
 
@@ -186,6 +220,39 @@ Approximate numbers are fine. / 你可以给个大概数字也行。
 - Only suggest quantification for bullets being kept. / 只对保留的 bullet 建议量化。
 - If the user doesn't remember exact numbers, suggest approximate ranges. / 如果记不清确切数字，建议用大概范围。
 - Never invent numbers. If none available, leave as-is. / 绝对不要编造数字。如果无法提供，保持原样。
+
+**⚠️ Anti-Filler Rule / 禁止空泛填充**:
+
+When a bullet lacks a quantified outcome, NEVER fill it with vague descriptors:
+当某条 bullet 缺少量化成果时，绝对不要用空泛描述填充：
+
+**❌ FORBIDDEN — Do NOT use these as outcome substitutes / 禁止用作成果替代**:
+- "实现智能化" / "achieved intelligent automation"
+- "具备完整闭环经验" / "demonstrated end-to-end capability"
+- "提升效率" (without specifying how much) / "improved efficiency"
+- "获得认可" / "received recognition"
+- "显著改善" / "significantly improved"
+- Any adjective that cannot be measured or verified / 任何无法度量或验证的形容词
+
+**✅ PRIMARY — Progressive probing for quantification / 首选：逐步追问引导量化**:
+
+Use 2 rounds of narrowing questions to extract measurable evidence. Adapt questions to the specific bullet context.
+用 2 轮递进式追问提取可量化证据，根据 bullet 语境调整问题。
+
+```
+Round 1 (volume/scope): "这个工作涉及多大的数据量/多少用户/多少业务线？"
+Round 2 (comparison): "做之前是什么样的？做之后有什么变化？"
+
+If after 2 rounds the user still cannot provide metrics:
+如果追问 2 轮后仍无法提供量化数据 → 进入 FALLBACK
+```
+
+**✅ FALLBACK — If no metrics after probing / 追问无果的兜底处理**:
+- Keep the original wording as-is / 保留原文措辞
+- Or rewrite to remove the empty outcome clause: "主导 AI Agent 方案设计，覆盖需求定义到技术验证全流程"
+- Do NOT add vague descriptors as substitutes / 绝对不要用空泛描述替代
+
+**Rule: A vague outcome is WORSE than no outcome. / 规则：空泛的结果比没有结果更差。**
 
 ---
 

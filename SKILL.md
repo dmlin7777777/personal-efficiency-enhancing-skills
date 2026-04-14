@@ -33,11 +33,34 @@ If no path is provided and no resume file is found in the workspace, guide the u
 
 **Philosophy / 理念**: Script extracts structured "features" (numbers, certifications, dates). LLM extracts semantic meaning (capabilities, priorities). Both outputs cross-validate.
 
-#### Step 1a: Accept JD Input / 接收 JD
+#### Step 1a: Accept JD Input + Market Research / 接收 JD + 市场调研
 
 1. **Accept JD input** — URL or plain text.
    - If URL: use `web_fetch` to extract job description content.
    - If text: use directly.
+
+2. **Ask for company and role context / 收集公司+岗位信息**:
+
+After receiving JD, ask the user:
+   - "请问这是哪个公司的岗位？具体岗位名称是什么？"
+   - If the user provides company name and role:
+
+3. **Web search for market expectations / 岗位偏好搜索**:
+
+Use `web_search` to research current market expectations:
+   - Query: "2026 [company] [role] 招聘偏好 技能要求"
+   - Query: "[company] [role] 面试重点 产品文化"
+   - Query: "2026 [role] 岗位趋势 行业变化" (if company not provided)
+
+Extract and incorporate findings:
+   - Industry trends (e.g., "AI skills increasingly valued for PM roles")
+   - Company-specific expectations (e.g., "Tencent emphasizes data-driven and cross-functional PMs")
+   - Emerging skill requirements NOT explicitly stated in JD
+   - Recent strategy/product direction that might influence hiring priorities
+
+Present findings briefly: "🔍 Market Research / 市场调研: [2-3 key insights]"
+
+These insights should feed into Step 1c keyword extraction and Phase 3 checkpoint design.
 
 #### Step 1b: Script Feature Extraction / 脚本特征提取
 
@@ -210,9 +233,9 @@ When a cluster shows a partial match (some tools overlap but not all):
 
 #### Step 2a: Read Resume with Structure Awareness / 结构感知读取
 
-If the source resume is .docx, use the structured reader from `diff_audit.py` to extract content with style metadata:
+If the source resume is .docx, use the structured reader to extract content with style metadata:
 ```
-python scripts/diff_audit.py --read-structured <resume_path>
+python scripts/main.py read-structured --resume <resume_path>
 ```
 
 This returns content with `style` information (Heading, ListBullet, TableCell, Normal, Header, etc.), plus a structure summary (`source_structure`).
@@ -657,9 +680,52 @@ Based on your response, I will adjust the tailoring strategy accordingly."
 
 **CRITICAL**: This phase requires interactive dialogue with the user. Follow the checkpoints in `references/interaction_checkpoints.md`.
 
+**⚠️ GLOBAL HARD RULES / 全局硬约束** (apply BEFORE and DURING all checkpoints):
+
+```
+1. EXPERIENCE ORDER HARD RULE / 经历排序硬约束:
+   - Work/internship entries MUST remain in REVERSE CHRONOLOGICAL ORDER
+     (most recent first, strictly by start date)
+   - The ONLY operation allowed on work/internship entries is INCLUSION or EXCLUSION
+     (取舍), NEVER reorder by "relevance" or "priority"
+   - Exception: Personal projects / side projects section CAN be ordered by relevance
+     to the JD
+   - If user asks to reorder → remind them of this rule and suggest exclusion instead
+
+2. PAGE LIMIT HARD RULE / 页数硬约束:
+   - On first run, ask: "简历需要控制在几页以内？(默认 1 页)"
+   - Store preference for the session
+   - This is a HARD constraint — final output MUST fit within the limit
+   - If user requests more entries than can fit:
+     "⚠️ Space Budget Warning / 空间预算预警:
+      你希望保留 X 条经历，但 1 页简历约能容纳 Y 条。
+      建议方案:
+      A) 保留前 Y 条，压缩描述
+      B) 放宽到 2 页 (不推荐此 JD 类型)
+      请选择。"
+
+3. SPACE BUDGET CALCULATION / 空间预算估算:
+   After CP1 (experience selection), estimate before proceeding:
+   - Header (name, contact): ~2 lines (fixed)
+   - Education: ~3-4 lines (fixed)
+   - Per work/internship entry: ~4-6 lines (depends on bullet count)
+   - Per project entry: ~3-4 lines
+   - Skills section: ~2-3 lines
+   - Total budget for 1-page resume: ~45-50 lines (A4, 11pt font)
+   - If estimated total > budget → warn user BEFORE generating
+```
+
 **Checkpoint execution order / 介入点执行顺序**:
 
 1. **Experience Selection / 经历取舍** — Always execute. Present prioritized list based on match relevance.
+
+   **REMEMBER: You can only INCLUDE or EXCLUDE entries. DO NOT reorder them.
+    Entries are presented in reverse chronological order — this order must be preserved.**
+   Present the full list in reverse chronological order, with a ✅/⚠️/❌ recommendation:
+   - ✅ Strongly recommended (high match relevance)
+   - ⚠️ Can include (supplementary breadth)
+   - ❌ Consider dropping (low relevance)
+   Let user confirm which to keep/remove.
 2. **Content Gaps / 内容缺口** — Execute unless skipped by routing. For each gap, use scenario-based prompts (see interaction_checkpoints.md Checkpoint 2).
 3. **Quantification / 量化补充** — Always execute. LLM identifies role-specific quantification opportunities (see interaction_checkpoints.md Checkpoint 3 — industry-aware).
 
@@ -731,10 +797,27 @@ Currency adaptation rules / 币种适配规则:
 
 1. **Generate Markdown draft** — Based on all confirmed adjustments, create the tailored resume in Markdown format.
 2. **Final confirmation** — Present the complete Markdown to the user for review.
-   - User confirms: proceed to PDF generation.
+   - User confirms: proceed to .docx generation.
    - User requests changes: apply changes and re-present.
 3. **Generate .docx** — Use python-docx to create a styled .docx based on the confirmed Markdown content.
 4. **Convert to PDF** — Use pandoc to convert .docx to PDF, preserving formatting.
+
+**⚠️ IMPORTANT: Save intermediate Markdown / 保留中间文件**:
+
+The Markdown draft from Step 1 is NOT a temporary file — it is a deliverable:
+- Save the final Markdown to `history/YYYY-MM-DD_{company}_{role}.md` (same location as the .docx)
+- This Markdown is REQUIRED for Phase 5 diff audit (diff_audit.py compares text files)
+- This Markdown enables future re-generation with different templates
+- This Markdown serves as version history for tracking changes across JDs
+- Do NOT delete the Markdown after generating .docx
+
+File layout after Phase 4:
+```
+history/
+├── 2026-04-14_腾讯_产品策划.md        # ← Markdown (keep this!)
+├── 2026-04-14_腾讯_产品策划.docx       # ← Final deliverable
+└── ...
+```
 
 **Shadow Resume Option / 影子副本**:
 
@@ -972,8 +1055,15 @@ For each 🔴 Major bullet that was **added or significantly modified** during t
 
 #### Step 5d: Generate Audit Log
 
-1. **Generate audit log** using `scripts/diff_audit.py` — compare source vs tailored version, output change summary.
-2. **Run ATS compatibility check** using `scripts/ats_checker.py`:
+1. **Save tailored Markdown** — The Markdown from Phase 4 Step 1 is already saved in `history/`. Use this as the primary input for audit.
+2. **Generate audit log** using `scripts/diff_audit.py` — compare source resume text vs the tailored Markdown:
+   ```
+   python scripts/main.py diff --source-docx <source_resume.docx> --tailored <history/YYYY-MM-DD_company_role.md> --company <company> --role <role> --json
+   ```
+   - Use `--source-docx` for the original resume (preserves style info)
+   - Use `--tailored` pointing to the saved Markdown file
+   - This compares the SOURCE resume against the TAILORED version
+3. **Run ATS compatibility check** using `scripts/ats_checker.py`:
    ```
    python scripts/ats_checker.py --resume <tailored_md> \
        --keywords <comma_separated_jd_keywords> \
