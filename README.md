@@ -23,7 +23,7 @@
 ## Features
 
 ### 🎯 Semantic-Level Matching
-Not keyword stuffing. Recognizes that "抗压能力强" aligns with "Thrives in fast-paced environments" and "数据驱动决策" maps to "Data-informed strategic thinking" — with confidence scores.
+Not keyword stuffing. Recognizes that "high stress tolerance" aligns with "Thrives in fast-paced environments" and "data-driven decision making" maps to "Data-informed strategic thinking" — with confidence scores.
 
 ### ⚖️ Cross-Credential Alignment
 JD asks for CET-6 but you only have IELTS 7.5? It tells you they're equivalent — and keeps the stronger credential on your resume.
