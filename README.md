@@ -31,6 +31,20 @@ JD asks for CET-6 but you only have IELTS 7.5? It tells you they're equivalent �
 ### 🔍 Reverse Interview Audit
 Generates mock interview questions targeting your resume's weak spots, so you can prepare before the interviewer challenges you.
 
+<details>
+<summary>📝 Example: What gets flagged?</summary>
+
+**Your bullet:** "Led the AI Agent solution design, achieving intelligent financial data processing."
+
+**Mock questions you'd get:**
+
+> 1. *"Led" — what was your team size? Did you have direct reports or were you coordinating peers?*
+> 2. *"AI Agent solution" — which platform? What was the actual architecture decision process?*
+> 3. *"Achieving intelligent processing" — what specific metric improved? Processing time? Error rate? Volume?*
+> 4. If you can't answer #3 with a number, the Anti-Filler Rule kicks in and rewrites this without the vague claim.
+
+</details>
+
 ### 🚫 Privacy Compliance
 Applying to North America? Automatically flags your photo and birthday for removal. Germany? Reminds you to explain career gaps.
 
@@ -60,7 +74,7 @@ The skill handles everything:
 
 ## How It Works
 
-| Stage | What Happens | Your Role |
+| Phase | What Happens | Your Role |
 |-------|-------------|-----------|
 | **1. Context** | Extract JD requirements (script + LLM), research company, assess risks | Review & confirm |
 | **2. Match** | Direct + implicit matching with confidence levels | Review match table |
