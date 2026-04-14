@@ -1,8 +1,7 @@
 # Resume Tailor v2
 
-An AI-powered resume tailoring skill with hybrid analysis (script + LLM), semantic matching with confidence levels, dynamic checkpoint routing, and cross-cultural adaptation.
-
-基于 AI 的简历定制技能：混合分析（脚本 + LLM）、带置信度的语义匹配、动态路由、跨文化适配。
+An AI-powered resume tailoring skill built on five core principles: hybrid analysis, fact conservation, semantic equivalence, closed-loop quantification, and reverse audit.
+基于 AI 的简历定制技能：混合分析、事实守恒、语义等价、闭环量化、反向审计。
 
 ## Quick Start / 快速使用
 
@@ -12,80 +11,55 @@ An AI-powered resume tailoring skill with hybrid analysis (script + LLM), semant
 
 Provide a JD (URL or text) and a resume file (.docx / .pdf / .txt). The skill will:
 
-1. Extract hard requirements via script (years, degree, certifications, etc.)
-2. Extract semantic keywords via LLM (skills, soft skills, domain knowledge)
+1. Research market expectations for the role
+2. Extract hard requirements (script) + semantic keywords (LLM) in one pass
 3. Match resume against JD with confidence levels
-4. Guide you through interactive adjustments
-5. Generate a tailored resume with full audit trail
+4. Guide you through interactive adjustments (with AI-proposed recommendations)
+5. Generate a tailored resume with reverse audit and interview prep
 
 ## Architecture / 架构
 
-### Design Principles / 设计原则
+### Five Core Principles / 五大核心原则
 
-1. **Script extracts, LLM judges / 脚本提取，LLM 判断** — Scripts do feature extraction only (numbers, dates, certifications); LLM handles semantic matching and cross-credential equivalence
-2. **Feature Presence ≠ Definitive Match / 存在 ≠ 匹配** — Scripts report features found; LLM decides if they meet requirements
-3. **Generic, not hardcoded / 通用化** — No China/US-centric assumptions; works with any credential system, date format, or language
-4. **Culture-adaptive / 文化自适应** — Different norms, tone, and PII rules per target region
+1. **Hybrid Analysis / 混合分析** — Script extracts hard features; LLM handles semantics. Both cross-validate.
+2. **Fact Conservation / 事实守恒** — Strict reverse chronological order; structure recovery requires human confirmation.
+3. **Semantic Equivalence / 语义等价** — Cross-credential mapping + cultural tone slider (6 regions).
+4. **Closed-loop Quantification / 闭环量化** — Anti-Filler Rule: progressive probing → fallback to original. Vague outcomes are forbidden.
+5. **Reverse Audit / 反向审计** — Interviewer persona review + mock questions + STAR prep sheets.
 
-### 5-Phase Pipeline / 五阶段流水线
+### 4-Phase Pipeline / 四阶段流水线
 
 ```
-Phase 1: Hybrid JD Analysis (Auto)
-├── Step 1a: Accept JD input (URL/text)
-├── Step 1b: Script feature extraction (jd_parser.py)
-│   ├── Experience years, degree, language tests, certifications
-│   ├── GPA, work authorization, security clearance
-│   ├── Resume date ranges, portfolio links scan
-│   └── Position weight signal (first 20% = dealbreakers)
-└── Step 1c: LLM semantic extraction
-    ├── 1c-i: Role context detection (level + region + doc type + work arrangement)
-    ├── 1c-ii: Keyword extraction + skill clustering
-    └── 1c-iii: Cross-validation with script output
+Phase 1: Contextual Intelligence / 需求与背景深度挖掘
+├── Accept JD + collect company/role info
+├── Market research (2 targeted web searches)
+└── Unified Context Extraction (one consolidated table)
+    ├── Script: hard requirements (years, degree, certs)
+    ├── LLM: role context + keywords + skill clusters
+    └── Format/ATS/portfolio/timeline risk warnings (consolidated)
 
-Phase 2: Semantic Match Analysis (Auto)
-├── Step 2a: Structure-aware resume reading
-│   ├── read_docx_structured() with style detection
-│   ├── Structure fallback: LLM semantic recovery if Normal > 80%
-│   ├── Format risk detection + portfolio link check
-│   └── Regional ATS compatibility check (ats_checker.py)
-└── Step 2b: Semantic matching
+Phase 2: Strict Matching / 严谨匹配与风险识别
+├── Structure-aware resume reading (with fallback + human verification)
+└── Semantic matching
     ├── Direct / Implicit (High/Med/Low) / Gap
-    ├── Cross-credential equivalence mapping
-    ├── Cultural soft skill translation
-    ├── Skill cluster matching
+    ├── Cross-credential equivalence
     └── Match score calculation
 
-Phase 3: Interactive Adjustment (Dynamic Routing)
-├── Step 3a: Dynamic routing based on match score
-│   ├── ≥92% + no hard gaps → Fast-Track mode (skip all checkpoints)
-│   ├── ≥90%: Skip checkpoints 2 + 5
-│   ├── 70-89%: Full flow
-│   ├── 50-69%: Extended probing
-│   └── <50%: Alignment check first
-├── Step 3b: Execute checkpoints (with memory pre-fill)
-│   ├── CP1: Experience selection
-│   ├── CP2: Content gaps (persona-aware probing + cache recall)
-│   ├── CP3: Quantification (industry-aware + cache recall)
-│   ├── CP4: Wording upgrade (cultural tone slider + risk classification)
-│   └── CP5: Experience merge/split
+Phase 3: Dynamic Interaction / 动态交互调整
+├── Three-tier routing: Fast-Track (≥90%) / Full Flow (50-89%) / Alignment Check (<50%)
+├── CP1: Experience selection (reverse chronological, inclusion/exclusion only)
+├── CP2: Content gaps (scenario-based probing)
+├── CP3: Quantification (Anti-Filler Rule: probe 2 rounds → fallback)
+└── CP4: Wording upgrade (cultural tone slider + cross-credential mapping)
 
-Phase 4: Generate Tailored Resume
-├── Markdown draft → User review
-├── Generate .docx (python-docx)
-├── Convert to PDF (pandoc)
-└── Shadow resume (optional, when source ≠ target language)
-
-Phase 5: Version Audit
-├── Step 5a: Save tailored resume
-├── Step 5b: Regional compliance audit (5 region PII rules)
-├── Step 5c: Sincerity check (reverse audit)
-│   ├── 5c-i: Interviewer persona construction
-│   ├── 5c-ii: Persona-based review (5 dimensions)
-│   └── 5c-iii: Interview question prep + STAR sheet (for 🔴 Major issues)
-└── Step 5d: Generate audit log
-    ├── diff_audit.py: source vs tailored diff
-    ├── ats_checker.py: ATS compatibility report
-    └── Compile final audit report (audit_log_template.md)
+Phase 4: Delivery & Reverse Audit / 交付与反向审计
+├── Generate Markdown → confirm → .docx (PDF optional)
+├── Compliance audit (regional PII rules)
+├── Reverse audit
+│   ├── Interviewer persona construction
+│   ├── Persona-based review (5 dimensions: AI feel, logical gaps, scope inflation, buzzword defense, cultural tone)
+│   └── Interview readiness: mock questions + STAR sheets (for 🔴 Major issues)
+└── Audit log (diff_audit.py + ats_checker.py)
 ```
 
 ## Files / 文件结构
@@ -130,23 +104,15 @@ python scripts/jd_parser.py --file jd.txt --resume resume.docx --json
 
 **Output / 输出**: JSON with `hard_requirements`, `summary`, `resume_date_ranges`, `portfolio`, `pdf_reader_used`
 
-### diff_audit.py — Diff & Structure Reader / 差异与结构读取
-
-Reads .docx with style awareness and compares source vs tailored resume.
+### main.py — CLI Entry Point / 命令行入口
 
 ```bash
-# Structure-aware read
-python scripts/diff_audit.py --read-structured resume.docx
+# Structure-aware resume reading
+python scripts/main.py read-structured --resume resume.docx
 
-# Diff comparison
-python scripts/diff_audit.py --source-docx source.docx --tailored-docx tailored.md --json
+# Diff comparison (source vs tailored)
+python scripts/main.py diff --source-docx source.docx --tailored tailored.md --company "Company" --role "Role" --json
 ```
-
-**Features / 功能**:
-- `read_docx_structured()`: paragraph style detection (Heading/Normal/ListBullet/TableCell)
-- Three-level risk classification per change
-- `--json` output for pipeline integration
-- `source_structure` for Phase 2 context injection
 
 ### ats_checker.py — ATS Compatibility Checker / ATS 兼容性检查
 
@@ -157,10 +123,9 @@ python scripts/ats_checker.py --resume tailored.md \
     --keywords "Python,SQL,AWS" --region north_america --json
 ```
 
-**10 Checks / 10 项检查**:
-Tables, Images, Emojis, Non-standard bullets, Missing sections, Contact info, Date inconsistency, Long bullets, Missing keywords, Regional PII
+**10 Checks**: Tables, Images, Emojis, Non-standard bullets, Missing sections, Contact info, Date inconsistency, Long bullets, Missing keywords, Regional PII
 
-**5 Regional Profiles / 5 个区域配置**:
+**5 Regional Profiles**:
 | Region | Strict | Forbidden PII |
 |--------|--------|---------------|
 | north_america | ✅ | photo, age, gender, marital, religion, nationality, salary, address |
@@ -168,16 +133,6 @@ Tables, Images, Emojis, Non-standard bullets, Missing sections, Contact info, Da
 | dach | ❌ | religion, political affiliation |
 | east_asia | ❌ | none |
 | global | ✅ | same as north_america |
-
-## Regional Adaptation / 区域适配
-
-The system auto-detects target region from JD signals and adapts:
-
-- **Phase 1**: Adjusts keyword weights (Campus vs Social vs Executive)
-- **Phase 2**: Applies cultural soft skill translation, cross-credential equivalence
-- **Phase 3**: Routes to region-appropriate checkpoint questioning
-- **Phase 4**: Determines output language (JD language, not resume language)
-- **Phase 5**: Runs region-specific compliance audit + ATS profile
 
 ## Cross-Credential Equivalence / 跨证书等价
 
@@ -201,51 +156,41 @@ PyPDF2>=3.0.0          # PDF reading (fallback)
 
 ## Version History / 版本历史
 
-### v2.3 (Current) — Robustness & UX Hardening
-- **Market research step**: Collect company + role name → web search for current hiring preferences before analysis
-- **Experience order hard rule**: Strict reverse chronological order for work/internship — only inclusion/exclusion allowed
-- **Page limit hard rule**: Ask user's page target, calculate space budget, warn before over-filling
-- **Markdown preservation**: Phase 4 Markdown is saved as a deliverable (not temp) — required for Phase 5 diff audit
-- **Anti-Filler Rule**: CP3 now prohibits vague outcome descriptors ("实现智能化" etc.) — progressive probing forces quantification; fallback keeps original wording
-- **Propose-don't-ask principle**: Every user-facing question must include a concrete recommendation; the user confirms or overrides, never decides from scratch
-- **Fixed `--read-structured` command**: Corrected SKILL.md to use `main.py read-structured` instead of broken `diff_audit.py` path
+### v2.4 (Current) — Structural Refactor
+- **Five Core Principles**: Explicitly anchored — hybrid analysis, fact conservation, semantic equivalence, closed-loop quantification, reverse audit
+- **4-Phase structure**: Consolidated from 5 phases — Contextual Intelligence → Strict Matching → Dynamic Interaction → Delivery & Reverse Audit
+- **Simplified routing**: 5-tier → 3-tier (Fast-Track ≥90% / Full Flow 50-89% / Alignment Check <50%)
+- **Unified extraction**: Merged script + LLM extraction into single consolidated table with integrated risk warnings
+- **Removed CP5 (Merge/Split)**: Simplified checkpoint flow to CP1-CP4
+- **Shadow Resume**: Moved from default flow to on-demand (only when source ≠ target language)
+- **Propose-don't-ask principle**: Every user-facing question must include a concrete recommendation
+
+### v2.3 — Robustness & UX Hardening
+- Market research step: collect company + role → web search for hiring preferences
+- Experience order hard rule: strict reverse chronological, inclusion/exclusion only
+- Page limit hard rule: space budget calculation with over-fill warning
+- Markdown preservation: saved as deliverable for diff audit
+- Anti-Filler Rule: progressive probing (2 rounds) → fallback to original wording
+- Fixed `--read-structured` command path
 
 ### v2.2 — Global Perspective Enhancements
-- **Tech stack freshness**: LLM identifies aging/legacy technologies and suggests modern equivalents
-- **Timeline gap detection**: Script parses date ranges, flags gaps ≥ 3 months (critical for DACH region)
-- **ATS modernity scaling**: Table/format severity adjusts by region (modern ATS like Greenhouse/Lever → low risk)
-- **Campus scenario library**: Auto-generates recall prompts for fresh grads during quantification checkpoint
-- **Multi-currency alignment**: LLM suggests converting currencies when resume and JD regions differ
-- **Structure recovery verification**: Human checkpoint added when LLM recovers resume structure
-- **Portfolio deep advice**: Role-specific guidance beyond link detection (repo citations, notebook links, citation counts)
+- Tech stack freshness detection, timeline gap detection
+- Campus scenario library, multi-currency alignment
+- Structure recovery verification, portfolio deep advice
 
 ### v2.1.1 — Architecture Cleanup
-- Removed `sys.argv` hacks — all scripts use direct function imports
-- New `engine.py`: pipeline orchestrator (`run_full_pipeline()`)
-- `main.py` is now a pure argparse layer (no business logic)
-- Removed stale nested `resume-tailor/` subdirectory
+- `engine.py` pipeline orchestrator, `main.py` pure CLI layer
+- Shared `utils.py` library, deduplicated ~210 lines
 
 ### v2.1 — Interaction & Depth Optimizations
-- **Fast-Track mode**: skip all checkpoints when match ≥92% + no hard gaps
-- **Memory pre-fill**: recall past CP2/CP3 responses for similar JDs (user_profile_cache.json)
-- **STAR prep sheet**: structured S/T/A/R interview guide for 🔴 Major changes
-- **Shadow resume**: parallel translation when source ≠ target language
-- **Unified CLI**: main.py entry point, shared utils.py library (deduplicated ~210 lines)
+- Fast-Track mode, memory pre-fill, STAR prep sheet, shadow resume
+- Unified CLI with shared utils
 
 ### v2.0 — Core Rewrite
-- Hybrid analysis: script extracts features, LLM does semantic matching
-- Skill clustering for keyword grouping
-- Structure fallback: LLM semantic recovery when styles are lost
-- Dynamic routing based on match score
-- Cross-credential equivalence with confidence levels
-- Cultural tone slider (6 regional presets)
-- Regional compliance audit (5 regions)
-- Interview readiness: mock questions for 🔴 Major issues
-- ATS checker with regional profiles + 10-item check
-- Portfolio link detection (script-level)
-- PDF reader tracking with degradation warnings
+- Hybrid analysis, skill clustering, structure fallback
+- Dynamic routing, cross-credential equivalence, cultural tone slider
+- Regional compliance audit, interviewer persona reverse audit
+- ATS checker with 5 regional profiles
 
 ### v1.0
-- Basic keyword extraction and matching
-- Interactive checkpoints
-- Diff audit
+- Basic keyword extraction and matching, interactive checkpoints, diff audit
