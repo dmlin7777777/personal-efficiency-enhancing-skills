@@ -31,8 +31,9 @@ JD asks for CET-6 but you only have IELTS 7.5? It tells you they're equivalent �
 ### 🔍 Reverse Interview Audit
 Generates mock interview questions targeting your resume's weak spots, so you can prepare before the interviewer challenges you.
 
-<details>
-<summary>📝 Example: What gets flagged?</summary>
+---
+
+#### 📝 Example: What gets flagged?
 
 **Your bullet:** "Spearheaded the digital transformation initiative, significantly improving operational efficiency."
 
@@ -40,10 +41,10 @@ Generates mock interview questions targeting your resume's weak spots, so you ca
 
 > 1. *"Spearheaded" — what was your actual role vs. other team members? Were you the final decision maker?*
 > 2. *"Digital transformation" — what systems were involved? What was the before-state?*
-> 3. *"Significantly improving efficiency" — by how much? 20%? 50%? What metric are we talking about — time saved, cost reduced, throughput increased?*
+> 3. *"Significantly improving efficiency" — by how much? 20%? 50% What metric are we talking about — time saved, cost reduced, throughput increased?*
 > 4. If you can't answer #3 with a number, the Anti-Filler Rule kicks in and rewrites this without the vague claim.
 
-</details>
+---
 
 ### 🚫 Privacy Compliance
 Applying to North America? Automatically flags your photo and birthday for removal. Germany? Reminds you to explain career gaps.
