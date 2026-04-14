@@ -34,13 +34,13 @@ Generates mock interview questions targeting your resume's weak spots, so you ca
 <details>
 <summary>📝 Example: What gets flagged?</summary>
 
-**Your bullet:** "Led the AI Agent solution design, achieving intelligent financial data processing."
+**Your bullet:** "Spearheaded the digital transformation initiative, significantly improving operational efficiency."
 
 **Mock questions you'd get:**
 
-> 1. *"Led" — what was your team size? Did you have direct reports or were you coordinating peers?*
-> 2. *"AI Agent solution" — which platform? What was the actual architecture decision process?*
-> 3. *"Achieving intelligent processing" — what specific metric improved? Processing time? Error rate? Volume?*
+> 1. *"Spearheaded" — what was your actual role vs. other team members? Were you the final decision maker?*
+> 2. *"Digital transformation" — what systems were involved? What was the before-state?*
+> 3. *"Significantly improving efficiency" — by how much? 20%? 50%? What metric are we talking about — time saved, cost reduced, throughput increased?*
 > 4. If you can't answer #3 with a number, the Anti-Filler Rule kicks in and rewrites this without the vague claim.
 
 </details>
