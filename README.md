@@ -4,6 +4,8 @@
 
 **AI-Powered Resume Tailoring — Not a Polisher, a Coach**
 
+[English](README.md) · [简体中文](README.zh-CN.md)
+
 </div>
 
 ---

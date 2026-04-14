@@ -4,6 +4,8 @@
 
 **AI 驱动的简历定制 — 不是润色工具，是求职教练**
 
+[English](README.md) · [简体中文](README.zh-CN.md)
+
 </div>
 
 ---
