@@ -82,13 +82,15 @@ class Snapshot:
         now_iso = datetime.now(timezone.utc).isoformat()
         self._data = {
             "_meta": {
-                "version": "1.0",
+                "version": "1.1",
                 "session_id": self.session_id,
                 "status": "initialized",
                 "last_updated": now_iso,
                 "current_node": None,
                 "rollback_from": None,
                 "error_log": [],
+                # Rolling summary of recent turns for continuity
+                "conversation_history": [],
             },
             "jd_facts": {
                 "raw_jd_text": jd_text[:5000],  # Truncate to prevent bloat
@@ -119,6 +121,8 @@ class Snapshot:
                     "page_limit": 1,
                     "include_shadow_resume": False,
                 },
+                # Semantic buffer: unstructured context that doesn't fit structured fields
+                "nuance_buffer": [],
             },
             "expert_outputs": {
                 "scout_report": None,
@@ -149,8 +153,8 @@ class Snapshot:
 
     def get_context_for_node(self, node_name: str) -> str:
         """
-        Build the human-readable context string that gets injected into LLM prompt.
-        Only includes relevant layers for the active node.
+        Build context string injected into LLM prompt.
+        Includes: JD facts, user decisions, relevant nuance buffer, recent history.
         """
         d = self._data
         meta = d["_meta"]
@@ -164,38 +168,67 @@ class Snapshot:
             f"[JD Facts]",
             f"Role: {jf['role_title']}",
             f"Company: {jf['company_name'] or 'N/A'}",
-            f"Region: {jf['region']}",
-            f"Level: {jf['role_level']}",
+            f"Region: {jf['region']} | Level: {jf['role_level']}",
             f"Hard Requirements: {_fmt_reqs(jf['hard_requirements'])}",
-            f"ATS Keywords: {', '.join(jf['ats_keys'][:20]) if jf['ats_keys'] else 'N/A'}",
+            f"ATS Keywords: {', '.join(jf.get('ats_keywords', [])[:20]) or 'N/A'}",
             "",
-            f"[User Decisions - Current State]",
-            f"Kept Experiences: {_fmt_experiences(ud['kept_experiences'])}",
-            f"Removed: {ud['removed_experiences']}",
-            f"Quantifications: {json.dumps(ud['confirmed_quantifications'], ensure_ascii=False) if ud['confirmed_quantifications'] else 'None yet'}",
-            f"Wording Changes: {len(ud['confirmed_wording_changes'])} changes confirmed",
+            f"[User Decisions]",
+            f"Kept Experiences: {_fmt_experiences(ud.get('kept_experiences', []))} ",
+            f"Removed: {ud.get('removed_experiences', [])} ",
+            f"Quantifications: {json.dumps(ud.get('confirmed_quantifications', {}), ensure_ascii=False) or 'None yet'}",
             "",
         ]
 
-        # Add scout report if available
+        # --- Nuance Buffer (filtered by target_nodes or broadcast) ---
+        nb = ud.get("nuance_buffer", [])
+        if nb:
+            relevant_nb = [
+                entry for entry in nb
+                if not entry.get("target_nodes") or node_name in entry.get("target_nodes", [])
+            ]
+            if relevant_nb:
+                lines.append("[Nuance Buffer — Context from Previous Nodes]")
+                for entry in relevant_nb[-5:]:  # Last 5 entries
+                    src = entry.get("source_node", "?")
+                    content = entry.get("content", "")
+                    tags = entry.get("tags", [])
+                    tag_str = f" [{', '.join(tags)}]" if tags else ""
+                    lines.append(f"  [{src}]{tag_str}: {content}")
+                lines.append("")
+
+        # --- Conversation History (last 3 turns) ---
+        hist = meta.get("conversation_history", [])
+        if hist:
+            recent = hist[-3:]  # Last N turns (configurable)
+            lines.append(f"[Recent Context — Last {len(recent)} Turns]")
+            for turn in recent:
+                tnum = turn.get("turn_number", "?")
+                tnode = turn.get("node", "?")
+                summary = turn.get("summary", "")
+                outputs = turn.get("key_outputs", [])
+                outputs_str = f" | Outputs: {', '.join(outputs[:3])}" if outputs else ""
+                lines.append(f"  Turn #{tnum} ({tnode}): {summary}{outputs_str}")
+            lines.append("")
+
+        # --- Expert Outputs (for downstream nodes) ---
         if eo.get("scout_report"):
-            lines.append(f"[Scout Report]\n{json.dumps(eo['scout_report'], indent=2, ensure_ascii=False)}")
+            lines.append("[Scout Report]")
+            lines.append(json.dumps(eo["scout_report"], indent=2, ensure_ascii=False)[:800])
             lines.append("")
 
-        # Add match matrix if available
         if eo.get("match_matrix"):
-            lines.append(f"[Match Matrix]\n{json.dumps(eo['match_matrix'], indent=2, ensure_ascii=False)[:1000]}")
+            lines.append("[Match Matrix]")
+            lines.append(json.dumps(eo["match_matrix"], indent=2, ensure_ascii=False)[:800])
             lines.append("")
 
-        # Add writer draft path if available (for auditor nodes)
         if eo.get("writer_draft_path"):
             draft_path = BASE_DIR / eo["writer_draft_path"]
             if draft_path.exists():
                 draft_content = draft_path.read_text(encoding="utf-8")
                 lines.append(f"[Tailored Resume Draft ({eo['writer_draft_path']})]")
-                lines.append(draft_content[:4000])  # Truncate for context window
+                lines.append(draft_content[:4000])
                 if len(draft_content) > 4000:
-                    lines.append(f"\n... [truncated, full content at {eo['writer_draft_path']}]")
+                    lines.append(f"\n... [truncated, full at {eo['writer_draft_path']}]")
                 lines.append("")
 
         lines.append("=" * 50)
@@ -275,6 +308,42 @@ class Snapshot:
             "message": message,
         }
         self._data["_meta"]["error_log"].append(entry)
+
+    # ── Nuance Buffer & History ──
+
+    def record_turn(self, turn_number: int, node: str,
+                     summary: str, key_outputs: list[str] = None) -> None:
+        """Append a compressed summary of this conversation turn to history."""
+        entry = {
+            "turn_number": turn_number,
+            "node": node,
+            "summary": summary,
+            "key_outputs": key_outputs or [],
+        }
+        hist = self._data["_meta"].setdefault("conversation_history", [])
+        hist.append(entry)
+        # Keep only last 10 turns (maxItems from schema)
+        if len(hist) > 10:
+            self._data["_meta"]["conversation_history"] = hist[-10:]
+        self.save()
+
+    def add_nuance(self, source_node: str, content: str,
+                   tags: list[str] = None,
+                   target_nodes: list[str] = None) -> None:
+        """
+        Write an unstructured but important note into the nuance buffer.
+        Use when you discover context that matters but has no structured field.
+        """
+        entry = {
+            "source_node": source_node,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "content": content[:500],  # Truncate very long notes
+            "tags": tags or [],
+            "target_nodes": target_nodes or [],  # Empty = broadcast
+        }
+        buf = self._data["user_decisions"].setdefault("nuance_buffer", [])
+        buf.append(entry)
+        self.save()
 
 
 # ════════════════════════════════════════════════════════
@@ -393,6 +462,27 @@ def run_orchestration_loop(snapshot: Snapshot,
 
         snapshot.apply_delta(delta, new_status, flags)
 
+        # --- Record turn in conversation history ---
+        llm_summary = update.get("message", f"Node {target_node} completed.")
+        key_outputs = []
+        if isinstance(delta, dict):
+            for layer_name, layer_data in delta.items():
+                if isinstance(layer_data, dict):
+                    for k, v in layer_data.items():
+                        if v and k not in ("removed_experiences",):
+                            key_outputs.append(f"{layer_name}.{k}")
+        snapshot.record_turn(iteration, target_node, llm_summary, key_outputs)
+
+        # --- Extract nuance from STATE_UPDATE (if LLM included any) ---
+        if isinstance(update.get("nuance"), list):
+            for n in update["nuance"]:
+                snapshot.add_nuance(
+                    source_node=target_node,
+                    content=n.get("content", ""),
+                    tags=n.get("tags", []),
+                    target_nodes=n.get("target_nodes"),
+                )
+
         print(f"[Engine] ✓ Node {target_node} complete → status={new_status} flags={flags}")
 
         # Check for rollback trigger
@@ -410,46 +500,40 @@ def run_orchestration_loop(snapshot: Snapshot,
 
 def render_deliverables(snapshot: Snapshot) -> dict:
     """
-    Render final outputs based on user preferences.
+    Render final outputs via the v3.0 rendering pipeline (renderer.py).
 
-    Current support:
-      - Markdown (always generated as intermediate)
-      - .docx via python-docx
-      - Future: HTML→PDF via weasyprint/pdfkit
+    Pipeline: Markdown → preprocess → Jinja2 HTML → PDF/DOCX
+      - Phase 1: Regex preprocessing (**Summary**: content → <span>)
+      - Phase 2: MD → HTML fragment (markdown-it-py / markdown)
+      - Phase 3: Jinja2 layout with inline CSS
+      - Phase 4a: WeasyPrint → PDF (with page overflow detection)
+      - Phase 4b: pypandoc → DOCX (cleaner than HTML→Word)
 
-    Returns dict of output paths.
+    Returns RenderResult dict from renderer.render().
     """
-    prefs = snapshot._data["user_decisions"]["user_preferences"]
-    draft_path = snapshot._data["expert_outputs"].get("writer_draft_path")
-
-    if not draft_path:
-        raise ValueError("No writer draft available for rendering.")
-
-    draft_full_path = BASE_DIR / draft_path
-    if not draft_full_path.exists():
-        raise FileNotFoundError(f"Draft not found: {draft_full_path}")
-
-    results = {"markdown": str(draft_full_path)}
-
-    output_format = prefs.get("output_format", "docx")
-
-    if output_format in ("docx", "pdf"):
-        # Import renderer lazily
-        try:
-            import docx
-            from docx import Document
-            from docx.shared import Pt, Inches
-            # TODO: Implement proper .docx generation with styled template
-            # For now: copy markdown as-is, .docx gen is placeholder
-            results["docx_generation"] = "TODO: implement styled .docx template rendering"
-        except ImportError:
-            results["docx_error"] = "python-docx not installed"
-
-    if output_format == "pdf":
-        results["pdf_generation"] = "TODO: implement HTML→PDF pipeline (v3.0+)"
-
-
-    return results
+    try:
+        from renderer import render as run_renderer
+        result = run_renderer(str(snapshot.snapshot_path))
+        return {
+            "success": result.success,
+            "html_path": result.html_path,
+            "pdf_path": result.pdf_path,
+            "docx_path": result.docx_path,
+            "md_path": result.md_path,
+            "page_count": result.page_count,
+            "warnings": result.warnings,
+            "errors": result.errors,
+            "engine_action": result.engine_action,
+        }
+    except Exception as e:
+        snapshot._log_error("RENDER_FAILURE", "renderer", str(e))
+        return {
+            "success": False,
+            "error": str(e),
+            "html_path": None,
+            "pdf_path": None,
+            "docx_path": None,
+        }
 
 
 # ════════════════════════════════════════════════════════
@@ -526,7 +610,7 @@ def _fmt_experiences(exps: list) -> str:
     """Format experiences list compactly."""
     if not exps:
         return "None selected yet"
-    return ", ".join(f"{e.get('label', e.get('id', '?'))}" for exps)
+    return ", ".join(e.get("label", e.get("id", "?")) for e in exps)
 
 
 # ── Session ID Generator ──

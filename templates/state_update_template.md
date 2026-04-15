@@ -78,16 +78,39 @@ If this block is missing or malformed, the output is rejected and a reformat req
   "delta": {
     "user_decisions": {
       "kept_experiences": [
-        {"id": "pwc", "label": "PwC — Data Analyst Intern", "position_order": 0},
+        {"id": "pwc", "label": "PwC Singapore — Data Analysis Intern", "position_order": 0},
         {"id": "valores", "label": "Valores Green Solutions — Data & Operations Specialist", "position_order": 1},
-        {"id": "jiuqi", "label": "Jiuji Software — Project Manager", "position_order": 2},
+        {"id": "jiuqi", "label": "Jiuqi Software — Project Manager", "position_order": 2},
         {"id": "didi", "label": "DiDi Finance — Strategy Intern", "position_order": 3}
       ],
-      "removed_experiences": ["tianzhi", "strowin"]
+      "removed_experiences": ["tianzhi", "strowin"],
+      "experience_metadata": {
+        "pwc": {
+          "company_name": "PwC Singapore",
+          "job_title": "Data Analysis Intern",
+          "department": "Financial Data & Systems",
+          "date_range": "Mar 2026 – Present",
+          "location": "Singapore (Hybrid)"
+        },
+        "valores": {
+          "company_name": "Valores Green Solutions Pte Ltd",
+          "job_title": "Data & Operations Specialist",
+          "department": "Data & Operations",
+          "date_range": "Oct 2025 – Mar 2026",
+          "location": "Singapore"
+        }
+      }
     }
   },
+  "metadata_completeness": {
+    "complete": false,
+    "missing_fields": [
+      {"experience_id": "didi", "fields": ["department"]},
+      {"experience_id": "jiuqi", "fields": ["department"]}
+    ]
+  },
   "flags": ["USER_INPUT_NEEDED"],
-  "message": "Experience selection confirmed by user. 4 experiences kept in reverse chronological order. Moving to gap filling & quantification."
+  "message": "Experience selection confirmed. Metadata collected for pwc and valores. Missing department info for didi + jiuqi — prompting user."
 }
 ```
 

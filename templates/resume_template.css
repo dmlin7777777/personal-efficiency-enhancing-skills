@@ -1,0 +1,317 @@
+/* Resume Tailor v3.0 — Tech Style CSS (Single Column, Compact One-Page)
+   Font: Times New Roman (Latin/Digits) + Microsoft YaHei (CJK)
+*/
+
+/* ========================================
+   1. Design Tokens
+   ======================================== */
+:root {
+    --primary: #1a1a1a;
+    --secondary: #555;
+    --muted: #777;
+    --border: #d4d4d4;
+    --line: #333;
+
+    --fs-name: 20pt;
+    --fs-subtitle: 10pt;
+    --fs-section: 10.5pt;
+    --fs-body: 9.5pt;
+    --fs-small: 8.5pt;
+    --fs-meta: 8pt;
+
+    --lh-body: 1.38;
+    --lh-tight: 1.28;
+
+    --gap-section: 7pt;
+    --gap-item: 5pt;
+    --gap-bullet: 1.2pt;
+
+    --page-w: 210mm;
+    --page-margin: 14mm;
+}
+
+/* ========================================
+   1.5 Font Face Declarations (for WeasyPrint & headless renderers)
+   
+   On desktop browsers, system fonts are used via font-family fallback.
+   In headless environments (WeasyPrint on Linux containers, CI/CD),
+   these @font-face rules allow bundling fonts alongside the CSS.
+   
+   To use bundled fonts:
+     1. Place .ttf/.otf files in the same directory as this CSS
+     2. Uncomment the url() lines below and adjust filenames
+   
+   If no local fonts are available, the renderer's check_rendering_environment()
+   will detect this and emit a warning.
+   ======================================== */
+
+/*
+@font-face {
+    font-family: 'Times New Roman';
+    src: local('Times New Roman'),
+         local('Times'),
+         url('times-new-roman.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Microsoft YaHei';
+    src: local('Microsoft YaHei'),
+         local('微软雅黑'),
+         local('SimHei'),
+         url('microsoft-yahei.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+*/
+
+/* ========================================
+   2. Print & Reset
+   ======================================== */
+@media print {
+    @page { size: A4; margin: 10mm var(--page-margin); }
+    body { background: #fff; margin: 0; padding: 0; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: "Times New Roman", Times, serif, "Microsoft YaHei", "微软雅黑", sans-serif;
+    color: var(--primary);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    text-align: justify;
+    word-break: break-word;
+    padding: var(--page-margin) 16mm;
+}
+
+/* ========================================
+   3. Header — Name Centered, No Icons
+   ======================================== */
+.header {
+    text-align: center;
+    margin-bottom: 6pt;
+    padding-bottom: 6pt;
+    border-bottom: 1.5pt solid var(--line);
+}
+
+.header h1 {
+    font-size: var(--fs-name);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-bottom: 2pt;
+}
+
+.header .subtitle {
+    font-size: var(--fs-subtitle);
+    color: var(--secondary);
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    margin-bottom: 5pt;
+}
+
+.contact-info {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4pt 16pt;
+    font-size: var(--fs-small);
+    color: var(--muted);
+}
+
+.contact-info span { white-space: nowrap; }
+
+/* Separator between contact items */
+.contact-info span:not(:last-child)::after {
+    content: " | ";
+    color: var(--border);
+    margin-left: 8pt;
+}
+
+/* ========================================
+   4. Section Titles — Compact
+   ======================================== */
+.section-title {
+    font-size: var(--fs-section);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-top: var(--gap-section);
+    margin-bottom: 3pt;
+    padding-bottom: 1.5pt;
+    border-bottom: 0.8pt solid var(--border);
+}
+
+/* ========================================
+   5. Experience — Company / Dept / Title / Date / Loc
+   ======================================== */
+.experience-item {
+    margin-bottom: var(--gap-item);
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+/* Row 1: Company + Title | Date (flexible) */
+.exp-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-weight: 700;
+    font-size: 10pt;
+    margin-top: 3pt;
+}
+
+.exp-header-row .company-title { flex: 1; }
+
+.exp-header-row .date-range {
+    white-space: nowrap;
+    color: var(--secondary);
+    font-weight: 400;
+    font-size: var(--fs-small);
+    min-width: 70pt;
+    text-align: right;
+}
+
+/* Row 2: Department (+ Location) — only if applicable */
+.exp-sub-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: var(--fs-meta);
+    color: var(--muted);
+    font-style: italic;
+    margin-bottom: 1.5pt;
+}
+
+.exp-sub-row .location {
+    white-space: nowrap;
+    font-style: normal;
+}
+
+/* ========================================
+   6. Bullet Points — "Summary: detail"
+   ======================================== */
+ul {
+    list-style: disc;
+    padding-left: 1.1rem;
+    margin: 2pt 0 0 0;
+}
+
+li {
+    margin-bottom: var(--gap-bullet);
+    line-height: var(--lh-tight);
+}
+
+li p { display: inline; margin: 0; }
+
+/* Bold summary prefix */
+.bullet-summary {
+    font-weight: 700;
+}
+
+/* ========================================
+   7. Education — Degree / School / Details
+   ======================================== */
+.education-item {
+    margin-bottom: var(--gap-item);
+    break-inside: avoid;
+}
+
+.edu-degree-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.edu-degree-row .degree {
+    font-weight: 700;
+    font-size: 10pt;
+}
+
+.edu-degree-row .date {
+    white-space: nowrap;
+    color: var(--secondary);
+    font-size: var(--fs-small);
+}
+
+.edu-school {
+    font-style: italic;
+    color: var(--secondary);
+    font-size: var(--fs-body);
+}
+
+.edu-details {
+    font-size: var(--fs-meta);
+    color: var(--muted);
+    margin-top: 1pt;
+}
+
+/* ========================================
+   8. Tables (Skills, Certs)
+   ======================================== */
+.info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2pt 0;
+    font-size: var(--fs-body);
+}
+
+.info-table td {
+    padding: 1.5pt 4pt;
+    vertical-align: top;
+    border: none;
+}
+
+.info-table td:first-child {
+    font-weight: 700;
+    white-space: nowrap;
+    width: 18%;
+    color: var(--primary);
+}
+
+.info-table td:last-child {
+    color: var(--secondary);
+}
+
+/* ========================================
+   9. Skills Tags
+   ======================================== */
+.skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3pt 6pt;
+    margin-top: 2pt;
+}
+
+.skill-tag {
+    font-size: var(--fs-meta);
+    color: var(--secondary);
+}
+
+/* ========================================
+   10. Utilities
+   ======================================== */
+.no-break { break-inside: avoid; page-break-inside: avoid; }
+
+.separator {
+    border: none;
+    border-top: 0.4pt solid var(--border);
+    margin: 4pt 0;
+}
+
+/* ========================================
+   11. Language Fallback
+   ======================================== */
+[lang="zh-CN"], [lang="zh-TW"] {
+    font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", sans-serif;
+}
+
+/* ========================================
+   12. Audit Overlay (optional)
+   ======================================== */
+.audit-highlight { background: #fef3c7; }
+.audit-warning  { background: #fee2e2; }
+.audit-pass     { background: #d1fae5; }

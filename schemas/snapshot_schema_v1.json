@@ -1,1 +1,523 @@
-{"$schema": "http://json-schema.org/draft-07/schema#", "$id": "snapshot-schema-v1.json", "title": "Resume Tailor v3 Context Snapshot", "description": "State protocol for pseudo multi-agent blackboard architecture. Three-layer isolation: Facts (read-only) / Decisions (persistent) / Outputs (volatile).", "type": "object", "required": ["_meta", "jd_facts", "user_decisions", "expert_outputs"], "properties": {"_meta": {"type": "object", "description": "Session metadata and orchestration control.", "required": ["version", "session_id", "status", "last_updated"], "properties": {"version": {"type": "string", "const": "1.0", "description": "Schema version — must match this file."}, "session_id": {"type": "string", "pattern": "^\\d{8}_[a-z0-9_]+$", "description": "Unique session identifier, format: YYYYMMDD_company_role"}, "status": {"type": "string", "enum": ["initialized", "scout_complete", "match_review", "phase_3_adjustment", "writer_draft", "audit_in_progress", "complete", "archived", "rollback_requested"], "description": "Status token — determines which expert node is active."}, "last_updated": {"type": "string", "format": "date-time", "description": "ISO 8601 timestamp of last state change."}, "current_node": {"type": ["string", "null"], "enum": [null, "scout", "architect_writer", "architect_quantify", "architect_wording", "auditor_sincerity", "auditor_compliance", "auditor_interview", "renderer"], "description": "Currently active expert sub-node (finer granularity than status)."}, "rollback_from": {"type": ["string", "null"], "enum": [null, "phase_4_audit", "phase_3_adjustment", "phase_2_match"], "description": "If set, indicates rollback source. Null means normal flow."}, "error_log": {"type": "array", "items": {"type": "object", "properties": {"timestamp": {"type": "string", "format": "date-time"}, "node": {"type": "string"}, "code": {"type": "string", "enum": ["JSON_PARSE_FAIL", "TOOL_ERROR", "LLM_TIMEOUT", "ROLLBACK_TRIGGERED", "USER_ABORT"]}, "message": {"type": "string"}}, "required": ["timestamp", "node", "code", "message"]}, "default": []}}}, "jd_facts": {"type": "object", "description": "Layer 1: Script-determined facts. READ-ONLY after initialization. Populated by engine.py + jd_parser.py.", "required": ["raw_jd_text", "role_title", "company_name", "region", "role_level", "hard_requirements", "soft_requirements"], "properties": {"raw_jd_text": {"type": "string", "description": "Original JD text (truncated to first 5000 chars)."}, "role_title": {"type": "string", "description": "Extracted job title."}, "company_name": {"type": ["string", "null"], "description": "Target company name. Null if not specified."}, "region": {"type": "string", "enum": ["north_america", "uk_ireland", "dach", "east_asia", "global", "unknown"], "description": "Target hiring region for tone/culture/privacy adaptation."}, "role_level": {"type": "string", "enum": ["campus", "social", "senior", "executive", "internship", "unknown"], "description": "Seniority level of the target role."}, "hard_requirements": {"type": "array", "items": {"type": "object", "required": ["category", "value", "met"], "properties": {"category": {"type": "string", "enum": ["education", "experience_years", "certification", "language", "technical_skill", "location", "visa"]}, "value": {"type": "string", "description": "The requirement value as stated in JD (e.g., 'Python 3+', 'IELTS 6.5')."}, "met": {"type": ["boolean", "null"], "description": "Whether candidate meets this requirement. null = not yet assessed."}, "confidence": {"type": "number", "minimum": 0, "maximum": 1, "description": "Match confidence score (0-1) if met=true/null."}, "evidence_source": {"type": ["string", "null"], "description": "Which resume bullet/experience provides evidence."}}}}, "soft_requirements": {"type": "array", "items": {"type": "object", "required": ["text", "category"], "properties": {"text": {"type": "string"}, "category": {"type": "string", "enum": ["skill", "trait", "experience_type", "industry", "tool"]}, "implicit_match_score": {"type": "number", "minimum": 0, "maximum": 1, "default": 0}}}}, "capability_clusters": {"type": "array", "items": {"type": "string"}, "description": "Semantic clusters derived from JD (e.g., ['Data Engineering', 'Cloud Architecture'])."}, "market_notes": {"type": ["string", "null"], "description": "Scout-gathered market/company research summary. Null until Scout phase completes."}, "ats_keywords": {"type": "array", "items": {"type": "string"}, "description": "Critical keywords for ATS compatibility check."}}}, "user_decisions": {"type": "object", "description": "Layer 2: User-confirmed interaction results. Persistent across nodes. Only modified via STATE_UPDATE JSON from LLM output.", "properties": {"resume_source_path": {"type": "string", "description": "Path to original resume file."}, "kept_experiences": {"type": "array", "items": {"type": "object", "required": ["id", "label"], "properties": {"id": {"type": "string", "description": "Internal experience ID (slugified)."}, "label": {"type": "string", "description": "Display label (company + role)."}, "position_order": {"type": "integer", "description": "Position in final resume (0-based). Maintains reverse chronological order."}}}, "removed_experiences": {"type": "array", "items": {"type": "string"}, "description": "IDs of experiences user chose to remove (hidden, not deleted)."}, "new_entries": {"type": "array", "items": {"type": "object", "required": ["section", "content"], "properties": {"section": {"type": "string", "enum": ["projects", "skills", "certifications", "languages", "other"]}, "content": {"type": "string", "description": "New content to add (raw text or structured)."}, "reason": {"type": "string", "description": "Why this entry fills a JD gap."}}}, "default": []}, "confirmed_quantifications": {"type": "object", "description": "Map of bullet_id → quantified outcome string.", "additionalProperties": {"type": "string", "description": "User-confirmed quantification (e.g., 'Reduced latency by 40% across 3 services')."}}, "confirmed_wording_changes": {"type": "array", "items": {"type": "object", "required": ["bullet_id", "original", "revised", "reason"], "properties": {"bullet_id": {"type": "string"}, "original": {"type": "string"}, "revised": {"type": "string"}, "reason": {"type": "string"}}}, "regional_adaptations": {"type": "object", "properties": {"photo_action": {"type": "string", "enum": ["keep", "remove", "flag_for_review"]}, "personal_info_removals": {"type": "array", "items": {"type": "string"}, "enum": ["birthday", "age", "marital_status", "nationality", "address"]}, "tone_level": {"type": "integer", "minimum": 1, "maximum": 5, "description": "1=very humble (Nordic), 5=assertive (North America)."}}}, "user_preferences": {"type": "object", "properties": {"output_format": {"type": "string", "enum": ["docx", "pdf", "markdown", "html"], "default": "docx"}, "page_limit": {"type": "integer", "minimum": 1, "maximum": 3, "default": 1}, "include_shadow_resume": {"type": "boolean", "default": false}}}}}, "expert_outputs": {"type": "object", "description": "Layer 3: Expert node outputs. VOLATILE — can be overwritten on re-execution.", "properties": {"scout_report": {"type": ["object", "null"], "properties": {"summary": {"type": "string"}, "key_findings": {"type": "array", "items": {"type": "string"}}, "risk_flags": {"type": "array", "items": {"type": "string"}}}}, "match_matrix": {"type": ["object", "null"], "description": "Structured matching results table."}, "writer_draft_path": {"type": ["string", "null"], "description": "Path to the tailored resume draft (Markdown)."}, "audit_report": {"type": ["object", "null"], "properties": {"overall_risk_level": {"type": "string", "enum": ["LOW", "MEDIUM", "HIGH"]}, "major_issues": {"type": "array", "items": {"type": "object", "required": ["severity", "category", "description", "bullet_ref"], "properties": {"severity": {"type": "string", "enum": ["🔴 MAJOR", "🟡 MINOR", "🟢 INFO"]}, "category": {"type": "string", "enum": ["ai_trace", "logic_gap", "scope_inflation", "terminology_unsupported", "cultural_mismatch", "format_issue"]}, "description": {"type": "string"}, "bullet_ref": {"type": ["string", "null"], "description": "Reference to the problematic bullet ID. Null if systemic issue."}, "suggested_fix": {"type": ["string", "null"]}}}, "minor_issues": {"type": "array", "items": {"type": "object"}}, "compliance_check": {"type": "object", "properties": {"photo": {"type": "string", "enum": ["ok", "should_remove", "must_remove"]}, "pii_items": {"type": "array", "items": {"type": "string"}}, "ats_score": {"type": "number", "minimum": 0, "maximum": 100}}}, "mock_interview_questions": {"type": "array", "items": {"type": "object", "required": ["question", "target_bullet", "difficulty"], "properties": {"question": {"type": "string"}, "target_bullet": {"type": ["string", "null"]}, "difficulty": {"type": "string", "enum": ["easy", "medium", "hard"]}, "suggested_star_response": {"type": ["string", "null"]}}}}, "delivery_package": {"type": ["object", "null"], "description": "Final output paths after rendering."}}}}}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "snapshot-schema-v1.json",
+  "title": "Resume Tailor v3 Context Snapshot",
+  "description": "State protocol for pseudo multi-agent blackboard architecture. Four-layer: Facts(read-only) / Decisions(persistent+nuance) / Outputs(volatile).",
+  "type": "object",
+  "required": [
+    "_meta",
+    "jd_facts",
+    "user_decisions",
+    "expert_outputs"
+  ],
+  "properties": {
+    "_meta": {
+      "type": "object",
+      "description": "Session metadata and orchestration control.",
+      "required": [
+        "version",
+        "session_id",
+        "status",
+        "last_updated"
+      ],
+      "properties": {
+        "version": {
+          "type": "string",
+          "const": "1.1",
+          "description": "1.0 initial, 1.1 added nuance_buffer + conversation_history."
+        },
+        "session_id": {
+          "type": "string",
+          "pattern": "^\\d{8}_[a-z0-9_]+$"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "initialized",
+            "scout_complete",
+            "match_review",
+            "phase_3_adjustment",
+            "writer_draft",
+            "audit_in_progress",
+            "complete",
+            "archived",
+            "rollback_requested"
+          ]
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "current_node": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "scout",
+            "architect_writer",
+            "architect_quantify",
+            "architect_wording",
+            "auditor_sincerity",
+            "auditor_compliance",
+            "auditor_interview",
+            "renderer"
+          ]
+        },
+        "rollback_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "phase_4_audit",
+            "phase_3_adjustment",
+            "phase_2_match"
+          ]
+        },
+        "error_log": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "node": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string",
+                "enum": [
+                  "JSON_PARSE_FAIL",
+                  "TOOL_ERROR",
+                  "LLM_TIMEOUT",
+                  "ROLLBACK_TRIGGERED",
+                  "USER_ABORT"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "timestamp",
+              "node",
+              "code",
+              "message"
+            ]
+          },
+          "default": []
+        },
+        "conversation_history": {
+          "type": "array",
+          "description": "Rolling summary of recent turns. Injected into each new node prompt by engine.py.",
+          "items": {
+            "type": "object",
+            "required": [
+              "turn_number",
+              "node",
+              "summary"
+            ],
+            "properties": {
+              "turn_number": {
+                "type": "integer"
+              },
+              "node": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string",
+                "description": "1-2 sentence summary per turn."
+              },
+              "key_outputs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "maxItems": 10,
+          "default": []
+        }
+      }
+    },
+    "jd_facts": {
+      "type": "object",
+      "description": "Layer 1: Script-determined facts. READ-ONLY after init.",
+      "required": [
+        "raw_jd_text",
+        "role_title",
+        "company_name",
+        "region",
+        "role_level",
+        "hard_requirements",
+        "soft_requirements"
+      ],
+      "properties": {
+        "raw_jd_text": {
+          "type": "string"
+        },
+        "role_title": {
+          "type": "string"
+        },
+        "company_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "region": {
+          "type": "string",
+          "enum": [
+            "north_america",
+            "uk_ireland",
+            "dach",
+            "east_asia",
+            "global",
+            "unknown"
+          ]
+        },
+        "role_level": {
+          "type": "string",
+          "enum": [
+            "campus",
+            "social",
+            "senior",
+            "executive",
+            "internship",
+            "unknown"
+          ]
+        },
+        "hard_requirements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "category",
+              "value",
+              "met"
+            ],
+            "properties": {
+              "category": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "met": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "confidence": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "evidence_source": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "soft_requirements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "text",
+              "category"
+            ],
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "category": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "capability_clusters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "market_notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ats_keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "user_decisions": {
+      "type": "object",
+      "description": "Layer 2: User-confirmed results + semantic buffer.",
+      "properties": {
+        "resume_source_path": {
+          "type": "string"
+        },
+        "kept_experiences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "label"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "position_order": {
+                "type": "integer"
+              },
+              "metadata": {
+                "type": "object",
+                "properties": {
+                  "company_name": {
+                    "type": "string"
+                  },
+                  "job_title": {
+                    "type": "string"
+                  },
+                  "department": {
+                    "type": "string"
+                  },
+                  "date_range": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "removed_experiences": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "new_entries": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "default": []
+        },
+        "confirmed_quantifications": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "confirmed_wording_changes": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "regional_adaptations": {
+          "type": "object",
+          "properties": {
+            "photo_action": {
+              "type": "string"
+            },
+            "personal_info_removals": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "tone_level": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5
+            }
+          }
+        },
+        "user_preferences": {
+          "type": "object",
+          "properties": {
+            "output_format": {
+              "type": "string",
+              "enum": [
+                "docx",
+                "pdf",
+                "markdown",
+                "html"
+              ],
+              "default": "docx"
+            },
+            "page_limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3,
+              "default": 1
+            },
+            "include_shadow_resume": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "nuance_buffer": {
+          "type": "array",
+          "description": "Semantic buffer: unstructured but important context passed between nodes. Not every fact fits a structured field; this is the escape hatch.",
+          "items": {
+            "type": "object",
+            "required": [
+              "source_node",
+              "timestamp",
+              "content"
+            ],
+            "properties": {
+              "source_node": {
+                "type": "string",
+                "enum": [
+                  "scout",
+                  "architect_writer",
+                  "architect_quantify",
+                  "architect_wording",
+                  "auditor_sincerity",
+                  "auditor_compliance",
+                  "auditor_interview"
+                ]
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "content": {
+                "type": "string",
+                "description": "Free-text note (1-3 sentences). Examples: user pivoting to ML; user hesitant on X; JD suggests scrappy startup vibe."
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Searchable tags: culture, quantification_hint, red_flag, user_sentiment, etc."
+              },
+              "target_nodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Empty = broadcast to all future nodes."
+              }
+            }
+          },
+          "default": []
+        }
+      }
+    },
+    "expert_outputs": {
+      "type": "object",
+      "description": "Layer 3: Expert outputs. VOLATILE - can be overwritten.",
+      "properties": {
+        "scout_report": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "summary": {
+              "type": "string"
+            },
+            "key_findings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "risk_flags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "match_matrix": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "writer_draft_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "audit_report": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "overall_risk_level": {
+              "type": "string",
+              "enum": [
+                "LOW",
+                "MEDIUM",
+                "HIGH"
+              ]
+            },
+            "major_issues": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "minor_issues": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "compliance_check": {
+              "type": "object"
+            },
+            "mock_interview_questions": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "delivery_package": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
