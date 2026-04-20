@@ -193,6 +193,7 @@ resume-tailor/
 ├── SKILL.md                              # Skill definition & workflow routing table
 ├── README.md                             # This file
 ├── README.zh-CN.md                       # Chinese documentation
+├── requirements.txt                      # Python dependencies (v3.0 + v2.x)
 ├── schemas/
 │   └── snapshot_schema_v1.json           # Snapshot schema (v1.1 with nuance_buffer)
 ├── templates/
@@ -203,11 +204,16 @@ resume-tailor/
 ├── scripts/
 │   ├── engine.py                         # Pipeline orchestrator (pseudo-multi-agent loop)
 │   ├── renderer.py                       # Rendering pipeline (MD → HTML → PDF/DOCX)
-│   └── utils.py                          # Shared utilities (JSON validation, etc.)
+│   ├── jd_parser.py                      # JD + resume structured extraction
+│   ├── diff_audit.py                     # Source vs tailored change analysis
+│   ├── ats_checker.py                    # ATS compatibility scoring (5-region profiles)
+│   ├── main.py                           # v2.x CLI interface (legacy)
+│   └── utils.py                          # Shared utilities (JSON validation, PII, etc.)
 ├── references/
-│   ├── writer_guide.md                   # Writer node instruction manual (~380 lines)
+│   ├── writer_guide.md                   # Writer node instruction manual (Phase 1 + CP1-CP5)
 │   ├── auditor_guide.md                  # Auditor node instruction manual
-│   └── scout_guide.md                    # Scout node instruction manual (TODO)
+│   ├── interaction_checkpoints.md        # Checkpoint details for Phase 3
+│   └── audit_log_template.md             # Audit log output template
 ├── sessions/                             # Active session snapshots (.gitignore'd)
 ├── history/                              # Archived sessions post-completion
 └── docs/
@@ -243,14 +249,15 @@ pyyaml>=6.0                # YAML support in snapshot schema
 <summary>🔧 Script Usage</summary>
 
 ```bash
-# Render a draft (snapshot.json → PDF/HTML/DOCX)
-python scripts/renderer.py render --snapshot sessions/abc123/snapshot.json --output-dir output/
-
 # Check rendering environment (fonts, WeasyPrint, pandoc)
 python scripts/renderer.py check-env
 
-# Run full pipeline orchestrator
-python scripts/engine.py start --jd jd.txt --resume resume.docx --session-id my_session
+# Render a draft snapshot (snapshot.json → PDF/HTML/DOCX)
+python scripts/renderer.py render --snapshot sessions/abc123/snapshot.json --output-dir output/
+
+# Note: engine.py is a library module (not directly runnable).
+# It is called via run_orchestration_loop(llm_call_fn, snapshot) from the AI agent.
+# For CLI usage, see scripts/main.py (v2.x legacy interface).
 ```
 
 </details>

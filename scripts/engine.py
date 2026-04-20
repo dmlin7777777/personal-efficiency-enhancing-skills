@@ -73,10 +73,20 @@ class Snapshot:
         # Load schema for validation
         schema = self._load_schema()
 
-        # --- Script layer: jd_parser.py ---
-        parse_jd, read_resume_text = _import_jd_parser()
-        resume_text = read_resume_text(resume_path) if resume_path else None
-        jd_result = parse_jd(jd_text, resume_text)
+        # --- Script layer: jd_parser.py (graceful degradation) ---
+        parse_jd, read_resume_text = None, None
+        resume_text = None
+        jd_result = {}
+        try:
+            parse_jd, read_resume_text = _import_jd_parser()
+            resume_text = read_resume_text(resume_path) if resume_path else None
+            jd_result = parse_jd(jd_text, resume_text)
+        except Exception as e:
+            # Degrade gracefully: let Scout node handle extraction via LLM
+            import traceback
+            traceback.print_exc()
+            print(f"[WARNING] jd_parser.py unavailable ({e}). "
+                  f"Scout node will handle extraction via LLM.")
 
         # Build initial snapshot structure
         now_iso = datetime.now(timezone.utc).isoformat()

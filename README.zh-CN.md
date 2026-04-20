@@ -193,6 +193,7 @@ resume-tailor/
 ├── SKILL.md                              # Skill 定义与工作流路由表
 ├── README.md                             # 英文文档
 ├── README.zh-CN.md                       # 本文件
+├── requirements.txt                      # Python 依赖项（v3.0 + v2.x）
 ├── schemas/
 │   └── snapshot_schema_v1.json           # 快照 Schema（v1.1 含语义缓冲区）
 ├── templates/
@@ -203,11 +204,16 @@ resume-tailor/
 ├── scripts/
 │   ├── engine.py                         # 流水线编排器（伪多智能体循环）
 │   ├── renderer.py                       # 渲染管线（MD → HTML → PDF/DOCX）
-│   └── utils.py                          # 共享工具函数（JSON 校验等）
+│   ├── jd_parser.py                      # JD + 简历结构化提取
+│   ├── diff_audit.py                     # 源简历 vs 定制简历变更分析
+│   ├── ats_checker.py                    # ATS 兼容性评分（5 地区配置）
+│   ├── main.py                           # v2.x CLI 接口（遗留）
+│   └── utils.py                          # 共享工具函数（JSON 校验、PII 等）
 ├── references/
-│   ├── writer_guide.md                   # Writer 节点指令手册（~380 行）
+│   ├── writer_guide.md                   # Writer 节点指令手册（Phase 1 + CP1-CP5）
 │   ├── auditor_guide.md                  # Auditor 节点指令手册
-│   └── scout_guide.md                    # Scout 节点指令手册（TODO）
+│   ├── interaction_checkpoints.md        # Phase 3 检查点详情
+│   └── audit_log_template.md             # 审计日志输出模板
 ├── sessions/                             # 活跃会话快照（已 .gitignore）
 ├── history/                              # 已归档的已完成会话
 └── docs/
@@ -243,14 +249,15 @@ pyyaml>=6.0                # Snapshot Schema 的 YAML 支持
 <summary>🔧 脚本使用</summary>
 
 ```bash
-# 渲染一份草稿（snapshot.json → PDF/HTML/DOCX）
-python scripts/renderer.py render --snapshot sessions/abc123/snapshot.json --output-dir output/
-
 # 检查渲染环境（字体、WeasyPrint、pandoc）
 python scripts/renderer.py check-env
 
-# 运行完整流水线编排器
-python scripts/engine.py start --jd jd.txt --resume resume.docx --session-id my_session
+# 渲染草稿快照（snapshot.json → PDF/HTML/DOCX）
+python scripts/renderer.py render --snapshot sessions/abc123/snapshot.json --output-dir output/
+
+# 注意：engine.py 是库模块（不能直接运行）。
+# 它通过 run_orchestration_loop(llm_call_fn, snapshot) 由 AI Agent 调用。
+# CLI 用法请参见 scripts/main.py（v2.x 遗留接口）。
 ```
 
 </details>

@@ -50,13 +50,14 @@ engine.py (Orchestrator)
 
 | Node | File | Responsibility |
 |------|------|---------------|
-| **Context Scout** | `references/scout_guide.md` | JD extraction, market research, role detection, capability clustering |
-| **Resume Architect** | `references/writer_guide.md` | CP1 selection, CP2 gaps, CP3 quantification, CP4 wording upgrade |
+| **Context Scout** | `references/writer_guide.md` (Phase 1 section) | JD extraction, market research, role detection, capability clustering |
+| **Resume Architect** | `references/writer_guide.md` (CP1-CP5) | CP1 selection, CP2 gaps, CP3 quantification, CP4 wording upgrade, CP5 draft |
 | **Sincerity Auditor** | `references/auditor_guide.md` | Compliance check, sincerity review, mock interview questions, STAR prep |
 
 ### State Protocol
 
 All nodes communicate via `context_snapshot.json` (see `schemas/snapshot_schema_v1.json`):
+- **Layer 0 (`_meta`)**: Session metadata, turn history, nuance buffer
 - **Layer 1 (`jd_facts`)**: Script-populated, read-only after init
 - **Layer 2 (`user_decisions`)**: User-confirmed interactions, persistent
 - **Layer 3 (`expert_outputs`)**: Node outputs, volatile, can be overwritten
@@ -68,9 +69,9 @@ Every node MUST append `STATE_UPDATE JSON` at end of output (see `templates/stat
 ### Phase 1: Contextual Intelligence
 
 **Node**: Context Scout
-**Reference**: `references/scout_guide.md`
+**Reference**: `references/writer_guide.md` (Phase 1 section)
 **Output**: Populated `jd_facts`, `scout_report`, capability clusters
-**Tools**: `jd_parser.py`, `web_search`
+**Tools**: `scripts/jd_parser.py` (with graceful fallback to LLM), `web_search`
 
 1. Accept JD input (URL → fetch, or text directly)
 2. Ask user: company name? target region?
@@ -148,8 +149,8 @@ Every node MUST append `STATE_UPDATE JSON` at end of output (see `templates/stat
 
 #### Step 4d: Compile & Deliver
 
-1. Run `diff_audit.py` (source vs tailored change evidence)
-2. Run `ats_checker.py` (ATS compatibility score)
+1. Run `scripts/diff_audit.py` (source vs tailored change evidence)
+2. Run `scripts/ats_checker.py` (ATS compatibility score)
 3. Compile final audit log combining all sources
 4. Render output (see Rendering section below)
 5. Archive snapshot from `sessions/` to `history/`
@@ -157,20 +158,23 @@ Every node MUST append `STATE_UPDATE JSON` at end of output (see `templates/stat
 ## Rendering Pipeline
 
 ```
-LLM outputs Markdown → Intermediate format conversion → Final output
-
-Path A (default): Markdown → python-docx → .docx
-Path B (user choice): Markdown → HTML/CSS → PDF (via weasyprint/pdfkit)
-Path C (fallback):  Markdown → pandoc → .docx/.pdf
+Layer 3 Draft (Markdown)
+    ↓ Phase 1: Regex Preprocessing
+    "**Summary**: detail" → "<span class='bullet-summary'>Summary:</span> detail"
+    ↓ Phase 2: MD → HTML Fragment
+    markdown-it-py (preferred) / python-markdown (fallback)
+    ↓ Phase 3: Jinja2 Layout
+    CSS-inlined complete HTML document via templates/resume_layout.html.j2
+    ↓ Phase 4a: WeasyPrint → PDF (with page overflow detection)
+    ↓ Phase 4b: pypandoc → DOCX (clean conversion)
 ```
 
-HTML/CSS intermediate layer gives precise control over:
-- Table borders and column widths (fixes python-docx layout bugs)
-- Line spacing and paragraph margins
-- Font hierarchy and visual emphasis
-- Responsive design for digital resumes
+**Graceful degradation**:
+- WeasyPrint unavailable → HTML-only output with "Print → Save as PDF" prompt
+- pandoc unavailable → raw Markdown export
+- markdown-it-py unavailable → python-markdown fallback
 
-CSS template location: `templates/resume_styles.css` (to be created)
+CSS template: `templates/resume_template.css` (Tech Style, single-column, A4 portrait)
 
 ## Output Structure
 
@@ -182,8 +186,8 @@ CSS template location: `templates/resume_styles.css` (to be created)
 ├── references/                     # Expert node guides
 │   ├── writer_guide.md
 │   ├── auditor_guide.md
-│   ├── scout_guide.md
-│   └── interaction_checkpoints.md
+│   ├── interaction_checkpoints.md
+│   └── audit_log_template.md
 ├── sessions/{session_id}/          # Runtime snapshots
 │   └── snapshot.json
 └── history/
@@ -203,14 +207,23 @@ CSS template location: `templates/resume_styles.css` (to be created)
 | STATE_UPDATE JSON parse fail | Inject self-correction prompt, retry once |
 | 🔴 Major issues in audit | ROLLBACK flag → revert to Phase 3 |
 | LLM timeout | Retry with same snapshot context |
-| Script failure (jd_parser etc.) | Degrade gracefully, warn user, do NOT abort |
+| Script failure (jd_parser etc.) | Degrade gracefully, Scout node handles via LLM, do NOT abort |
 
 ## Dependencies
 
 ```
-python-docx>=0.8.11      # .docx read/write
-pdfplumber>=0.9.0        # PDF reading (primary)
-PyPDF2>=3.0.0            # PDF reading (fallback)
-weasyprint OR pdfkit     # HTML→PDF rendering (optional)
-pandoc                  # Format conversion (optional)
+# v3.0 Rendering Pipeline (core)
+jinja2>=3.1.0              # Template engine
+markdown-it-py>=3.0.0      # Markdown → HTML (preferred)
+weasyprint>=60.0           # PDF generation (optional, graceful fallback)
+pypandoc>=1.17             # DOCX generation (optional, requires pandoc CLI)
+pyyaml>=6.0                # Snapshot schema YAML support
+
+# v2.x Resume I/O (still used)
+python-docx>=0.8.11        # .docx read/write
+pdfplumber>=0.10.0         # PDF reading (primary)
+
+# Optional fallbacks
+python-markdown>=3.5.0     # Fallback MD parser
+PyPDF2>=3.0.0              # Fallback PDF reader
 ```
