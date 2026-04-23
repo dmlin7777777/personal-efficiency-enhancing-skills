@@ -1,6 +1,6 @@
 ---
 name: resume-tailor
-description: This skill should be used when the user wants to tailor their resume to a specific job description (JD). It analyzes JD keywords, matches against the source resume, provides adjustment suggestions with interactive checkpoints, and generates a tailored resume with full reverse audit.
+description: "针对岗位 JD 定制简历，或生成通用方向简历。分析 JD 关键词、匹配源简历、交互式调整建议、反向诚意审计。触发词：调简历、tailor resume、优化简历、生成简历、通用简历、简历定制、resume for this JD"
 version: "3.0"
 ---
 
@@ -12,9 +12,16 @@ Analyze a job description and tailor the source resume to match, using isolated 
 
 ## Trigger Phrases
 
+**Mode A (JD-Targeted):**
 - "帮我针对这个 JD 调简历" / "tailor my resume for this JD"
 - "优化简历给这个岗位" / "optimize resume for this role"
 - Any JD text or URL provided with resume adjustment intent
+
+**Mode B (General-Purpose):**
+- "帮我针对产品岗位生成一个通用性的简历"
+- "做个通用版简历" / "生成XX方向的简历"
+- "make a general resume" / "create a role-oriented resume"
+- "简历定制" / "简历优化"
 
 ## Resume Input
 
