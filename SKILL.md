@@ -174,6 +174,27 @@ Every node MUST append `STATE_UPDATE JSON` at end of output (see `templates/stat
 | CP3 | Quantification | Anti-Filler Rule: progressive probing, no vague filler |
 | CP4 | Wording Upgrade | Verb map, cultural tone slider, before→after comparison |
 
+**CP3 Progressive Probing Protocol** (when a bullet lacks quantification):
+
+| Round | Question | Example |
+|-------|----------|---------|
+| 1 (Scope) | "影响了多少人/多少业务线？" | "全公司使用" / "覆盖 3 个 BU" |
+| 2 (Comparison) | "改造前后分别是什么状态？用了多久？" | "从 48h 缩短到 12h" |
+| 3 (Quality) | "准确率、错误率、客户反馈有变化吗？" | "准确率 99.5%" |
+| 4 (Business Impact) | "为公司节省了多少钱/带来多少收入？" | "年节省 2000+ 小时" |
+
+**If user cannot quantify after 2 rounds**: Write process-focused content, never use vague fillers ("实现智能化", "显著提升效率").
+
+**CP4 Cultural Tone Slider**:
+
+| Region | Level | Style | Self-Promotion |
+|--------|-------|-------|----------------|
+| North America | 5 (Assertive) | Led, Drove, Spearheaded | Results-first |
+| UK/Ireland | 4 | Delivered, Managed | Measured confidence |
+| DACH | 3 | Contributed to, Responsible for | Fact-focused |
+| East Asia | 2 (Collaborative) | 协同, 推进, 支持 | Team-oriented |
+| Nordics | 1 (Humble) | Contributed, Improved | Impact-only |
+
 **Global Interaction Principle**: Every question must include a concrete recommendation. User confirms or overrides — never decides from scratch.
 
 ### Phase 4: Delivery & Audit (Physical Isolation)
