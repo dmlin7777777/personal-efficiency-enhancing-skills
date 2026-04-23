@@ -21,6 +21,58 @@ Analyze a job description and tailor the source resume to match, using isolated 
 On first run, **ask the user to provide their resume file path** (.docx preferred, .pdf or .txt acceptable).
 Store the path in memory. **Never modify the original.**
 
+## Operating Modes
+
+Resume Tailor has two operating modes, determined by whether a JD is provided:
+
+### Mode A: JD-Targeted（有 JD 定制）
+
+Full 4-phase pipeline. This is the primary mode.
+
+**Trigger**: User provides a JD (text, URL, or file) alongside resume adjustment intent.
+
+**Flow**: Phase 1 → Phase 2 → Phase 3 → Phase 4 (see Workflow Pipeline below)
+
+### Mode B: General-Purpose（无 JD 通用）
+
+Simplified pipeline when no specific JD is available. Builds a role-oriented resume using capability matching from the story library.
+
+**Trigger**:
+- User asks for a resume "for X role" without providing a JD
+- "帮我针对产品岗位生成一个通用性的简历"
+- "做个通用版简历" / "make a general resume"
+- "生成XX方向的简历" / "create a role-oriented resume"
+
+**Flow**:
+
+```
+Phase G1: Capability Matching (replaces Phase 1+2)
+  1. Identify target role type from user's description (e.g., 产品/数据/商业分析)
+  2. Read project story library (唯一事实来源) → extract all experiences
+  3. Build capability matching matrix: experience × core role competencies
+  4. Rank experiences by match score
+  5. Present selection recommendation to user (CP1)
+
+Phase G2: Interactive Refinement (= Phase 3, CP1-CP4)
+  CP1: Experience selection (which experiences to keep/hide)
+  CP2: Skipped (no JD → no gap analysis)
+  CP3: Quantification audit (Anti-Filler Rule — same as Mode A)
+  CP4: Wording upgrade (same as Mode A, but use general role tone)
+
+Phase G3: Delivery & Audit (= Phase 4)
+  Same physical isolation audit as Mode A.
+  Additional Auditor check: "Does this bullet claim something not in the story library?"
+```
+
+**Key Differences from Mode A**:
+- No JD → No `jd_facts` layer, no ATS keyword matching, no hard requirement alerts
+- Story library is the **sole source of truth** — no fabrication, no speculation, no "logical inference"
+- If story library lacks data for a bullet → ask user to confirm, never invent
+- Simpler matching: role-type competencies instead of JD-specific keywords
+
+**⚠️ Critical Rule for Mode B**: 
+> **只做提炼，不做扩展。** Even logically reasonable inferences (e.g., "覆盖从需求定义到上线的完整周期") are FORBIDDEN unless explicitly stated in the story library. Only distill and reorganize what already exists.
+
 ## Five Core Principles
 
 | # | Principle | One-Line Definition |
@@ -203,7 +255,9 @@ CSS template: `templates/resume_template.css` (Tech Style, single-column, A4 por
 | Error | Action |
 |-------|--------|
 | No resume file | Ask user to provide path |
+| No JD provided | Switch to Mode B (General-Purpose) — see Operating Modes |
 | JD URL fetch fails | Ask user to paste text |
+| Story library missing data for a claim | Ask user to confirm — NEVER fabricate or infer |
 | STATE_UPDATE JSON parse fail | Inject self-correction prompt, retry once |
 | 🔴 Major issues in audit | ROLLBACK flag → revert to Phase 3 |
 | LLM timeout | Retry with same snapshot context |
